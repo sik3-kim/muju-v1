@@ -27,12 +27,9 @@
 1. **API 키 발급** (쓰려는 AI 것만 있으면 됩니다)
    - Gemini: <https://aistudio.google.com/apikey> 구글 계정으로 로그인 → Create API key (`AIza...`)
    - Claude: <https://console.anthropic.com> 가입 → 결제수단 등록·크레딧 충전 → API Keys에서 키 생성 (`sk-ant-...`). Console에서 월 사용 한도(Limits)를 걸어두세요.
-2. **앱 주소 만들기 (배포)**: 이 저장소는 비공개이므로 Vercel(무료)을 권장합니다.
-   1. <https://vercel.com> 에서 GitHub 계정으로 로그인
-   2. Add New → Project → `muju-v1` 저장소 Import
-   3. 설정은 그대로 두고 Deploy (Vite 프로젝트로 자동 인식)
-   4. 생성된 `https://....vercel.app` 주소를 휴대폰에서 열기
-   - 배포할 브랜치(Production Branch)를 작업 브랜치로 지정하거나, 작업 브랜치를 main에 병합한 뒤 배포하세요.
+2. **앱 주소**: <https://sik3-kim.github.io/muju-v1/>
+   - main 브랜치에 합쳐질 때마다 GitHub Actions가 자동으로 빌드해 GitHub Pages에 올립니다 (`.github/workflows/deploy.yml`).
+   - 처음 한 번만: 저장소 Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 선택.
 3. 휴대폰에서 주소를 연 뒤 **홈 화면에 추가**하면 앱처럼 쓸 수 있습니다.
 4. 앱의 ⚙️설정에서 API 키, 답변 부서 설명을 입력합니다. Gemini 모델은 기본값(`gemini-flash-latest`, 항상 최신 Flash)을 그대로 두면 됩니다.
 5. 📄자료에서 업무보고서, 예상 질의답변 등을 올립니다.
