@@ -29,6 +29,7 @@ interface Settings {
   auto: boolean;
 }
 
+// 이전 이름(의회 답변 도우미) 때 쓰던 저장 이름을 그대로 써서 기존 설정·키를 유지한다
 const SETTINGS_KEY = "council-helper-settings";
 const defaults: Settings = {
   engine: "claude",
@@ -135,7 +136,7 @@ function renderTranscript(): void {
     if (cursor >= segments.length) html.push('<div class="divider">▼ 답변할 질문</div>');
     html.push(`<div class="seg interim">${escapeHtml(interim)}</div>`);
   }
-  if (html.length === 0) html.push('<div class="empty">「듣기 시작」을 누르면 여기에 의원 발언이 실시간으로 표시됩니다.</div>');
+  if (html.length === 0) html.push('<div class="empty">「듣기 시작」을 누르면 여기에 회의 발언이 실시간으로 표시됩니다.</div>');
   transcriptEl.innerHTML = html.join("");
   if (stickToBottom) transcriptEl.scrollTop = transcriptEl.scrollHeight;
 }
