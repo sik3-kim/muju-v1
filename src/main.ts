@@ -205,8 +205,11 @@ function scheduleAuto(): void {
   silenceTimer = window.setTimeout(maybeAutoAnswer, settings.silenceSec * 1000);
 }
 
-listener.onFinal = (text) => {
-  segments.push({ text, at: new Date() });
+listener.onFinal = (text, replacesPrevious) => {
+  const last = segments.length - 1;
+  // 직전 줄이 이어진 문장이면 그 줄을 바꾼다. 이미 답변에 쓰인 줄(질문 시작 위치 앞)은 건드리지 않고 새 줄로 추가
+  if (replacesPrevious && last >= 0 && last >= cursor) segments[last] = { text, at: segments[last].at };
+  else segments.push({ text, at: new Date() });
   interim = "";
   renderTranscript();
   scheduleAuto();

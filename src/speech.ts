@@ -43,7 +43,8 @@ function getCtor(): SRConstructor | undefined {
 export type ListenerState = "listening" | "stopped" | "error";
 
 export class Listener {
-  onFinal: (text: string) => void = () => {};
+  /** replacesPrevious: 직전 확정 문장이 더 길어진 것이면 true (새 줄 대신 앞줄을 바꿔야 함) */
+  onFinal: (text: string, replacesPrevious: boolean) => void = () => {};
   onInterim: (text: string) => void = () => {};
   onState: (state: ListenerState, message?: string) => void = () => {};
 
@@ -85,9 +86,10 @@ export class Listener {
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
-    // 일부 Android Chrome 은 같은 결과를 여러 번 final 로 보낸다.
-    // 세션 안에서 같은 위치·같은 내용으로 이미 보낸 결과는 건너뛴다 (위치만 보면 실제 발언을 놓칠 수 있음).
-    const emitted = new Set<string>();
+    // Android Chrome 은 말하는 도중의 문장을 조금씩 늘려 가며 여러 번 final 로 보낸다
+    // ("농공단지" → "농공단지 입주율은" → …). 직전 확정 문장이 이어진 것이면 새 줄 대신 바꿔치기한다.
+    let lastFinal = "";
+    let lastFinalAt = 0;
 
     rec.onstart = () => {
       this.onState("listening");
@@ -99,11 +101,18 @@ export class Listener {
         const r = e.results[i];
         const text = r[0]?.transcript ?? "";
         if (r.isFinal) {
-          const key = `${i}:${text.trim()}`;
-          if (!emitted.has(key) && text.trim()) {
-            emitted.add(key);
-            this.onFinal(text.trim());
-          }
+          const t = text.trim();
+          if (!t) continue;
+          const now = Date.now();
+          const cur = squash(t);
+          const prev = squash(lastFinal);
+          const recent = now - lastFinalAt < 10_000;
+          // 같은 문장이거나 이미 받은 문장의 앞부분이면 무시
+          if (prev && recent && prev.startsWith(cur)) continue;
+          const extends_ = Boolean(prev) && recent && cur.startsWith(prev);
+          lastFinal = t;
+          lastFinalAt = now;
+          this.onFinal(t, extends_);
         } else {
           interim += text;
         }
@@ -157,4 +166,9 @@ export class Listener {
       }, 1000);
     }
   }
+}
+
+/** 띄어쓰기·문장부호 차이는 무시하고 비교 */
+function squash(s: string): string {
+  return s.replace(/[\s.,?!]/g, "");
 }
