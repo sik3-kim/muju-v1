@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f3a5f" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <title>의회 답변 도우미</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>의회 답변 도우미</h1>
+      <span id="status" class="status">대기</span>
+    </header>
+
+    <main>
+      <!-- 회의 -->
+      <section id="tab-meeting" class="tab active">
+        <div class="row">
+          <button id="btn-listen" class="btn big listen">🎙 듣기 시작</button>
+          <label class="toggle"><input type="checkbox" id="auto-mode" /> 자동 답변</label>
+        </div>
+
+        <div class="transcript-head">
+          <span>실시간 자막 <small>(줄을 누르면 거기서부터 질문으로 봄)</small></span>
+          <button id="btn-clear" class="btn small ghost">지우기</button>
+        </div>
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+
+        <button id="btn-answer" class="btn big primary">⚡ 답변 만들기</button>
+        <div class="engine-row" role="radiogroup" aria-label="답변 AI">
+          <span>답변 AI</span>
+          <label><input type="radio" name="engine" value="claude" /> Claude</label>
+          <label><input type="radio" name="engine" value="gemini" /> Gemini</label>
+        </div>
+
+        <details class="manual">
+          <summary>직접 입력해서 테스트</summary>
+          <textarea id="manual-q" rows="3" placeholder="예) 폐수처리시설 국비가 부족하다는데 대책이 뭡니까?"></textarea>
+          <button id="btn-manual" class="btn">이 질문으로 답변 만들기</button>
+        </details>
+
+        <div id="answers"></div>
+      </section>
+
+      <!-- 자료 -->
+      <section id="tab-docs" class="tab">
+        <p class="hint">답변은 여기 등록한 자료 안에서만 만듭니다. 업무보고서, 예산서, 예상 질의답변 등을 올려두세요.
+          (PDF · HWPX · TXT 가능, HWP는 한글에서 PDF로 저장 후 올리기)</p>
+        <label class="btn big primary file-btn">
+          📄 파일 올리기
+          <input type="file" id="file-input" accept=".pdf,.hwpx,.txt,.md,.csv" multiple hidden />
+        </label>
+        <details class="manual">
+          <summary>텍스트 붙여넣기</summary>
+          <input id="paste-name" placeholder="자료 이름 (예: 예상 질의답변)" />
+          <textarea id="paste-text" rows="6" placeholder="내용 붙여넣기"></textarea>
+          <button id="btn-paste" class="btn">자료로 등록</button>
+        </details>
+        <div id="doc-summary" class="hint"></div>
+        <ul id="doc-list" class="doc-list"></ul>
+      </section>
+
+      <!-- 설정 -->
+      <section id="tab-settings" class="tab">
+        <label class="field">답변 부서 설명
+          <input id="org" placeholder="예) 무주군 ○○과 투자유치팀 (답변자: ○○과장)" />
+        </label>
+        <p class="hint">API 키는 이 휴대폰 브라우저에만 저장됩니다. 쓰려는 AI의 키만 넣으면 됩니다.</p>
+
+        <fieldset class="group">
+          <legend>Claude (유료, 정확)</legend>
+          <label class="field">Claude API 키
+            <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off" />
+            <small>발급: console.anthropic.com → API Keys</small>
+          </label>
+          <label class="field">모델
+            <select id="model"></select>
+          </label>
+          <label class="field">생각 깊이 (낮을수록 빠름)
+            <select id="effort">
+              <option value="low">낮음 — 빠름 (기본)</option>
+              <option value="medium">보통</option>
+              <option value="high">높음 — 느리지만 꼼꼼</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Gemini (무료 한도 있음)</legend>
+          <label class="field">Gemini API 키
+            <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off" />
+            <small>발급: aistudio.google.com/apikey (구글 계정으로 로그인)</small>
+          </label>
+          <label class="field">모델
+            <select id="gemini-model"></select>
+            <small>기본값 gemini-flash-latest 는 항상 최신 Flash 모델로 연결됩니다.</small>
+          </label>
+          <button id="btn-gemini-models" class="btn small">이 키로 쓸 수 있는 모델 불러오기</button>
+        </fieldset>
+        <label class="field">자동 답변: 말이 멈춘 뒤 기다릴 시간
+          <select id="silence">
+            <option value="2">2초</option>
+            <option value="3">3초 (기본)</option>
+            <option value="5">5초</option>
+          </select>
+        </label>
+        <label class="field">글자 크기
+          <select id="font">
+            <option value="1">보통</option>
+            <option value="1.15">크게</option>
+            <option value="1.3">아주 크게</option>
+          </select>
+        </label>
+        <p class="hint">회의 중에는 화면이 꺼지지 않게 유지됩니다. 휴대폰을 회의장 스피커 쪽으로 두면 인식률이 좋아집니다.</p>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button data-tab="meeting" class="active">🎙<span>회의</span></button>
+      <button data-tab="docs">📄<span>자료</span></button>
+      <button data-tab="settings">⚙️<span>설정</span></button>
+    </nav>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
