@@ -30,6 +30,11 @@
         <div id="transcript" class="transcript" aria-live="polite"></div>
 
         <button id="btn-answer" class="btn big primary">⚡ 답변 만들기</button>
+        <div class="engine-row" role="radiogroup" aria-label="답변 AI">
+          <span>답변 AI</span>
+          <label><input type="radio" name="engine" value="claude" /> Claude</label>
+          <label><input type="radio" name="engine" value="gemini" /> Gemini</label>
+        </div>
 
         <details class="manual">
           <summary>직접 입력해서 테스트</summary>
@@ -60,23 +65,41 @@
 
       <!-- 설정 -->
       <section id="tab-settings" class="tab">
-        <label class="field">Claude API 키
-          <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off" />
-          <small>이 휴대폰 브라우저에만 저장됩니다. 키 발급: console.anthropic.com</small>
-        </label>
         <label class="field">답변 부서 설명
           <input id="org" placeholder="예) 무주군 ○○과 투자유치팀 (답변자: ○○과장)" />
         </label>
-        <label class="field">AI 모델
-          <select id="model"></select>
-        </label>
-        <label class="field">생각 깊이 (낮을수록 빠름)
-          <select id="effort">
-            <option value="low">낮음 — 빠름 (기본)</option>
-            <option value="medium">보통</option>
-            <option value="high">높음 — 느리지만 꼼꼼</option>
-          </select>
-        </label>
+        <p class="hint">API 키는 이 휴대폰 브라우저에만 저장됩니다. 쓰려는 AI의 키만 넣으면 됩니다.</p>
+
+        <fieldset class="group">
+          <legend>Claude (유료, 정확)</legend>
+          <label class="field">Claude API 키
+            <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off" />
+            <small>발급: console.anthropic.com → API Keys</small>
+          </label>
+          <label class="field">모델
+            <select id="model"></select>
+          </label>
+          <label class="field">생각 깊이 (낮을수록 빠름)
+            <select id="effort">
+              <option value="low">낮음 — 빠름 (기본)</option>
+              <option value="medium">보통</option>
+              <option value="high">높음 — 느리지만 꼼꼼</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Gemini (무료 한도 있음)</legend>
+          <label class="field">Gemini API 키
+            <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off" />
+            <small>발급: aistudio.google.com/apikey (구글 계정으로 로그인)</small>
+          </label>
+          <label class="field">모델
+            <select id="gemini-model"></select>
+            <small>기본값 gemini-flash-latest 는 항상 최신 Flash 모델로 연결됩니다.</small>
+          </label>
+          <button id="btn-gemini-models" class="btn small">이 키로 쓸 수 있는 모델 불러오기</button>
+        </fieldset>
         <label class="field">자동 답변: 말이 멈춘 뒤 기다릴 시간
           <select id="silence">
             <option value="2">2초</option>

@@ -3,17 +3,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Doc } from "./docs";
 
+export type Engine = "claude" | "gemini";
+
+export const ENGINE_LABEL: Record<Engine, string> = { claude: "Claude", gemini: "Gemini" };
+
 export const MODELS = [
   { id: "claude-opus-5", label: "Opus 5 — 가장 정확 (기본)" },
   { id: "claude-sonnet-5", label: "Sonnet 5 — 더 빠름" },
   { id: "claude-haiku-4-5", label: "Haiku 4.5 — 가장 빠름·저렴" },
 ] as const;
 
+/** 구글이 항상 최신 Flash 모델로 연결해 주는 이름 */
+export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
+
 export type Effort = "low" | "medium" | "high";
 
 export const NO_QUESTION = "[질문 없음]";
 
-const INSTRUCTIONS = `당신은 지방의회 회의(본회의, 상임위원회, 예산결산특별위원회, 행정사무감사 등)에서 의원 질의에 답변하는 집행부 공무원(과장 등)을 옆에서 돕는 팀장의 보조자입니다.
+export const INSTRUCTIONS = `당신은 지방의회 회의(본회의, 상임위원회, 예산결산특별위원회, 행정사무감사 등)에서 의원 질의에 답변하는 집행부 공무원(과장 등)을 옆에서 돕는 팀장의 보조자입니다.
 
 입력은 회의장 스피커 소리를 휴대폰으로 받아 적은 실시간 음성인식 결과입니다. 오인식, 띄어쓰기 오류, 문장부호 없음이 흔하고 누가 말했는지 구분되어 있지 않습니다.
 
@@ -33,7 +40,7 @@ const INSTRUCTIONS = `당신은 지방의회 회의(본회의, 상임위원회, 
 ■ 확인 필요: 자료에 없어 확인해야 할 사항 (없으면 이 항목 생략)
 ■ 주의: 민감한 쟁점이나 발언 시 유의점 (필요할 때만)`;
 
-function materialsBlock(org: string, docs: Doc[]): string {
+export function materialsBlock(org: string, docs: Doc[]): string {
   const parts: string[] = [];
   if (org.trim()) parts.push(`<답변 부서>\n${org.trim()}\n</답변 부서>`);
   if (docs.length === 0) {
@@ -46,8 +53,12 @@ function materialsBlock(org: string, docs: Doc[]): string {
 }
 
 export interface AnswerRequest {
+  engine: Engine;
+  /** 선택한 엔진의 API 키 */
   apiKey: string;
+  /** 선택한 엔진의 모델 이름 */
   model: string;
+  /** Claude 전용: 생각 깊이 */
   effort: Effort;
   org: string;
   docs: Doc[];
@@ -59,20 +70,31 @@ export interface AnswerRequest {
   signal?: AbortSignal;
 }
 
+export function buildUserText(context: string, recent: string): string {
+  return [
+    context.trim() ? `<이전 발언>\n${context.trim()}\n</이전 발언>` : "",
+    `<최근 발언>\n${recent.trim()}\n</최근 발언>`,
+    "위 <최근 발언>에 있는 의원 질문에 대한 답변 요지를 작성하세요.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export async function generateAnswer(req: AnswerRequest): Promise<string> {
+  if (req.engine === "gemini") {
+    // Gemini 라이브러리는 선택했을 때만 불러온다
+    const { generateGemini } = await import("./gemini");
+    return generateGemini(req);
+  }
+  return generateClaude(req);
+}
+
+async function generateClaude(req: AnswerRequest): Promise<string> {
   const client = new Anthropic({
     apiKey: req.apiKey,
     // 휴대폰 브라우저에서 바로 호출한다. API 키는 이 기기에만 저장된다.
     dangerouslyAllowBrowser: true,
   });
-
-  const userText = [
-    req.context.trim() ? `<이전 발언>\n${req.context.trim()}\n</이전 발언>` : "",
-    `<최근 발언>\n${req.recent.trim()}\n</최근 발언>`,
-    "위 <최근 발언>에 있는 의원 질문에 대한 답변 요지를 작성하세요.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
 
   const isHaiku = req.model.startsWith("claude-haiku");
   const isOpus5 = req.model === "claude-opus-5";
@@ -90,7 +112,7 @@ export async function generateAnswer(req: AnswerRequest): Promise<string> {
         // 자료는 회의 동안 바뀌지 않으므로 캐시해 두면 두 번째 질문부터 빠르고 저렴하다
         { type: "text", text: materialsBlock(req.org, req.docs), cache_control: { type: "ephemeral", ttl: "1h" } },
       ],
-      messages: [{ role: "user", content: userText }],
+      messages: [{ role: "user", content: buildUserText(req.context, req.recent) }],
     },
     { signal: req.signal },
   );
@@ -109,14 +131,26 @@ export async function generateAnswer(req: AnswerRequest): Promise<string> {
 
 export function describeError(err: unknown): string {
   if (err instanceof Anthropic.APIUserAbortError) return "취소됨";
-  if (err instanceof Anthropic.AuthenticationError) return "API 키가 올바르지 않습니다. 설정에서 키를 확인하세요.";
+  if (err instanceof Anthropic.AuthenticationError) return "Claude API 키가 올바르지 않습니다. 설정에서 키를 확인하세요.";
   if (err instanceof Anthropic.PermissionDeniedError) return "이 API 키로는 해당 모델을 쓸 수 없습니다. 설정에서 다른 모델을 고르세요.";
   if (err instanceof Anthropic.RateLimitError) return "요청이 너무 많습니다. 잠시 후 다시 시도하세요.";
   if (err instanceof Anthropic.BadRequestError) {
-    if (/credit|balance|billing/i.test(err.message)) return "API 크레딧(잔액)이 부족합니다. Claude Console에서 충전하세요.";
+    if (/credit|balance|billing/i.test(err.message)) return "Claude API 크레딧(잔액)이 부족합니다. Claude Console에서 충전하세요.";
     return `요청 오류: ${err.message}`;
   }
   if (err instanceof Anthropic.APIConnectionError) return "인터넷 연결을 확인하세요 (와이파이/5G).";
   if (err instanceof Anthropic.APIError) return `API 오류 (${err.status}): ${err.message}`;
+  if (err instanceof Error && err.name === "AbortError") return "취소됨";
+  // Gemini SDK 오류 (ApiError, status 포함)
+  const status = (err as { status?: unknown } | null)?.status;
+  if (err instanceof Error && typeof status === "number") {
+    if (status === 400 && /api key/i.test(err.message)) return "Gemini API 키가 올바르지 않습니다. 설정에서 키를 확인하세요.";
+    if (status === 403) return "Gemini API 키 권한이 없습니다. 키를 다시 발급하거나 설정을 확인하세요.";
+    if (status === 404) return "Gemini 모델 이름을 찾을 수 없습니다. 설정에서 모델을 다시 고르세요.";
+    if (status === 429) return "Gemini 무료 사용 한도를 넘었습니다. 잠시 후 다시 시도하거나 Claude로 바꿔 보세요.";
+    if (status >= 500) return "Gemini 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도하세요.";
+    return `Gemini 오류 (${status}): ${err.message}`;
+  }
+  if (err instanceof TypeError && /fetch|network/i.test(err.message)) return "인터넷 연결을 확인하세요 (와이파이/5G).";
   return err instanceof Error ? err.message : String(err);
 }

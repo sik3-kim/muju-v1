@@ -1,12 +1,26 @@
 import "./style.css";
 import { Listener } from "./speech";
 import { loadDocs, saveDocs, newDoc, fileToText, type Doc } from "./docs";
-import { MODELS, NO_QUESTION, generateAnswer, describeError, type Effort } from "./answer";
+import {
+  MODELS,
+  GEMINI_DEFAULT_MODEL,
+  ENGINE_LABEL,
+  NO_QUESTION,
+  generateAnswer,
+  describeError,
+  type Effort,
+  type Engine,
+} from "./answer";
 
 // ---------- 설정 ----------
 
 interface Settings {
+  /** 지금 답변에 쓰는 AI */
+  engine: Engine;
+  /** Claude API 키 */
   apiKey: string;
+  geminiKey: string;
+  geminiModel: string;
   org: string;
   model: string;
   effort: Effort;
@@ -17,7 +31,10 @@ interface Settings {
 
 const SETTINGS_KEY = "council-helper-settings";
 const defaults: Settings = {
+  engine: "claude",
   apiKey: "",
+  geminiKey: "",
+  geminiModel: GEMINI_DEFAULT_MODEL,
   org: "",
   model: MODELS[0].id,
   effort: "low",
@@ -284,16 +301,18 @@ function renderAnswer(text: string): string {
   return out.join("");
 }
 
-async function runJob(job: Job): Promise<void> {
-  if (!settings.apiKey) {
-    toast("설정 탭에서 Claude API 키를 먼저 입력하세요.");
+async function runJob(job: Job, engine: Engine = settings.engine): Promise<void> {
+  const apiKey = engine === "gemini" ? settings.geminiKey : settings.apiKey;
+  if (!apiKey) {
+    toast(`⚙️설정에서 ${ENGINE_LABEL[engine]} API 키를 먼저 입력하세요.`);
     return;
   }
+  const other: Engine = engine === "claude" ? "gemini" : "claude";
 
   const card = document.createElement("article");
   card.className = "card loading";
   card.innerHTML = `
-    <header><time>${timeLabel(new Date())}</time><span class="tag">${job.auto ? "자동" : job.source}</span>
+    <header><time>${timeLabel(new Date())}</time><span class="tag">${job.auto ? "자동" : job.source}</span><span class="tag ${engine}">${ENGINE_LABEL[engine]}</span>
       <span class="spin">생성 중…</span></header>
     <div class="body"></div>
     <details class="src"><summary>인식된 발언 보기</summary><p>${escapeHtml(job.recent)}</p></details>
@@ -301,6 +320,7 @@ async function runJob(job: Job): Promise<void> {
       <button class="btn small stop">중지</button>
       <button class="btn small copy" hidden>복사</button>
       <button class="btn small retry" hidden>다시 만들기</button>
+      <button class="btn small other" hidden>${ENGINE_LABEL[other]}로</button>
     </footer>`;
   answersEl.prepend(card);
   // 휴대폰에서는 답변 카드가 화면 아래에 있을 수 있으므로 바로 보이게 스크롤
@@ -310,6 +330,7 @@ async function runJob(job: Job): Promise<void> {
   const stopBtn = card.querySelector<HTMLButtonElement>(".stop")!;
   const copyBtn = card.querySelector<HTMLButtonElement>(".copy")!;
   const retryBtn = card.querySelector<HTMLButtonElement>(".retry")!;
+  const otherBtn = card.querySelector<HTMLButtonElement>(".other")!;
   const spin = card.querySelector<HTMLElement>(".spin")!;
 
   const controller = new AbortController();
@@ -320,8 +341,9 @@ async function runJob(job: Job): Promise<void> {
   if (job.auto) autoBusy = true;
   try {
     await generateAnswer({
-      apiKey: settings.apiKey,
-      model: settings.model,
+      engine,
+      apiKey,
+      model: engine === "gemini" ? settings.geminiModel : settings.model,
       effort: settings.effort,
       org: settings.org,
       docs,
@@ -362,6 +384,8 @@ async function runJob(job: Job): Promise<void> {
     stopBtn.hidden = true;
     copyBtn.hidden = !text;
     retryBtn.hidden = false;
+    // 다른 AI 키가 있을 때만 "다른 AI로" 버튼을 보인다
+    otherBtn.hidden = !(other === "gemini" ? settings.geminiKey : settings.apiKey);
   }
 
   copyBtn.onclick = async () => {
@@ -374,7 +398,10 @@ async function runJob(job: Job): Promise<void> {
   };
   retryBtn.onclick = () => {
     card.remove();
-    void runJob({ ...job, auto: false });
+    void runJob({ ...job, auto: false }, engine);
+  };
+  otherBtn.onclick = () => {
+    void runJob({ ...job, auto: false }, other);
   };
 }
 
@@ -510,6 +537,55 @@ function bindSettings(): void {
     saveSettings();
     if (!settings.auto) window.clearTimeout(silenceTimer);
   });
+
+  // 답변 AI 선택 (회의 화면)
+  const engineRadios = document.querySelectorAll<HTMLInputElement>('input[name="engine"]');
+  engineRadios.forEach((r) => {
+    r.checked = r.value === settings.engine;
+    r.addEventListener("change", () => {
+      if (!r.checked) return;
+      settings.engine = r.value as Engine;
+      saveSettings();
+      const key = settings.engine === "gemini" ? settings.geminiKey : settings.apiKey;
+      if (!key) toast(`⚙️설정에서 ${ENGINE_LABEL[settings.engine]} API 키를 입력하세요.`);
+    });
+  });
+
+  // Gemini
+  const geminiKey = $<HTMLInputElement>("gemini-key");
+  const geminiModel = $<HTMLSelectElement>("gemini-model");
+  const fillGeminiModels = (names: string[]) => {
+    const all = Array.from(new Set([GEMINI_DEFAULT_MODEL, settings.geminiModel, ...names]));
+    geminiModel.innerHTML = all
+      .map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}${n === GEMINI_DEFAULT_MODEL ? " (기본)" : ""}</option>`)
+      .join("");
+    geminiModel.value = settings.geminiModel;
+  };
+  fillGeminiModels([]);
+  geminiKey.value = settings.geminiKey;
+  geminiKey.addEventListener("change", () => {
+    settings.geminiKey = geminiKey.value.trim();
+    saveSettings();
+  });
+  geminiModel.addEventListener("change", () => {
+    settings.geminiModel = geminiModel.value;
+    saveSettings();
+  });
+  $("btn-gemini-models").addEventListener("click", async () => {
+    if (!settings.geminiKey) {
+      toast("Gemini API 키를 먼저 입력하세요.");
+      return;
+    }
+    toast("모델 목록을 불러오는 중…");
+    try {
+      const { listGeminiModels } = await import("./gemini");
+      const names = await listGeminiModels(settings.geminiKey);
+      fillGeminiModels(names);
+      toast(`모델 ${names.length}개를 불러왔습니다. 모르면 기본값을 그대로 두세요.`);
+    } catch (err) {
+      toast(describeError(err));
+    }
+  });
 }
 
 // ---------- 시작 ----------
@@ -521,4 +597,4 @@ void loadDocs().then((d) => {
   docs = d;
   renderDocs();
 });
-if (!settings.apiKey) toast("처음이시면 ⚙️설정에서 API 키를, 📄자료에서 업무보고서를 등록하세요.");
+if (!settings.apiKey && !settings.geminiKey) toast("처음이시면 ⚙️설정에서 API 키를, 📄자료에서 업무보고서를 등록하세요.");

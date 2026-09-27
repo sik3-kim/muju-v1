@@ -11,16 +11,22 @@
 | 기능 | 방식 |
 |---|---|
 | 음성인식 | 휴대폰 브라우저 내장 음성인식 (Android Chrome / iPhone Safari, 한국어, 무료) |
-| 답변 생성 | Claude API (기본 모델 Opus 5, 설정에서 Sonnet 5·Haiku 4.5 선택 가능) |
+| 답변 생성 | **Claude API 또는 Gemini API 중 선택** (회의 화면에서 바로 전환, 답변 카드마다 「다른 AI로」 다시 만들기) |
 | 자료 | PDF · HWPX · TXT 업로드 또는 붙여넣기. **휴대폰 안에만 저장** |
 | API 키 | 설정 화면에서 입력. **휴대폰 안에만 저장** (코드·저장소에 넣지 않음) |
 
-서버가 따로 없습니다. 휴대폰이 음성인식 서비스와 Claude API에 직접 연결합니다 (와이파이/5G 필요).
+서버가 따로 없습니다. 휴대폰이 음성인식 서비스와 AI(Claude/Gemini)에 직접 연결합니다 (와이파이/5G 필요).
+
+| AI | 요금 | 특징 |
+|---|---|---|
+| Claude | 쓴 만큼 유료 (신규 가입 시 소액 무료 크레딧) | 정확도 우선. 모델: Opus 5(기본) / Sonnet 5 / Haiku 4.5 |
+| Gemini | 무료 한도 안에서 무료 | 한도를 넘으면 잠시 막힘 → 「Claude로」 버튼으로 바로 다시 만들기 |
 
 ## 처음 설정
 
-1. **Claude API 키 발급**: <https://console.anthropic.com> 가입 → 결제수단 등록·크레딧 충전 → API Keys에서 키 생성 (`sk-ant-...`)
-   - 쓴 만큼 요금이 나옵니다. Console에서 월 사용 한도(Limits)를 걸어두세요.
+1. **API 키 발급** (쓰려는 AI 것만 있으면 됩니다)
+   - Gemini: <https://aistudio.google.com/apikey> 구글 계정으로 로그인 → Create API key (`AIza...`)
+   - Claude: <https://console.anthropic.com> 가입 → 결제수단 등록·크레딧 충전 → API Keys에서 키 생성 (`sk-ant-...`). Console에서 월 사용 한도(Limits)를 걸어두세요.
 2. **앱 주소 만들기 (배포)**: 이 저장소는 비공개이므로 Vercel(무료)을 권장합니다.
    1. <https://vercel.com> 에서 GitHub 계정으로 로그인
    2. Add New → Project → `muju-v1` 저장소 Import
@@ -28,7 +34,7 @@
    4. 생성된 `https://....vercel.app` 주소를 휴대폰에서 열기
    - 배포할 브랜치(Production Branch)를 작업 브랜치로 지정하거나, 작업 브랜치를 main에 병합한 뒤 배포하세요.
 3. 휴대폰에서 주소를 연 뒤 **홈 화면에 추가**하면 앱처럼 쓸 수 있습니다.
-4. 앱의 ⚙️설정에서 API 키, 답변 부서 설명을 입력합니다.
+4. 앱의 ⚙️설정에서 API 키, 답변 부서 설명을 입력합니다. Gemini 모델은 기본값(`gemini-flash-latest`, 항상 최신 Flash)을 그대로 두면 됩니다.
 5. 📄자료에서 업무보고서, 예상 질의답변 등을 올립니다.
 
 ## 회의 중 사용법
@@ -60,6 +66,7 @@ npm run build    # dist/ 에 배포용 파일 생성
 ```
 
 - `src/speech.ts` 음성인식 (Web Speech API, 자동 재시작)
-- `src/answer.ts` Claude API 호출, 답변 지침(프롬프트)
+- `src/answer.ts` 답변 지침(프롬프트), Claude API 호출
+- `src/gemini.ts` Gemini API 호출 (같은 지침·자료 사용)
 - `src/docs.ts` 자료 저장(IndexedDB), PDF·HWPX 글자 추출
 - `src/main.ts` 화면
