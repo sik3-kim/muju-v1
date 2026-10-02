@@ -80,15 +80,21 @@ body {
   color: var(--ink);
   text-shadow: 0 5px 0 var(--paper);
 }
-.btn-start {
-  font-size: clamp(34px, 8vmin, 60px);
-  padding: .45em 1.3em;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--sun), var(--peach) 55%, var(--berry));
-  box-shadow: 0 10px 0 #E0507F, 0 18px 30px rgba(255, 111, 156, .35);
+/* 종류 고르기 카드 (그림 + 이름) */
+.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 100%; }
+.cat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: clamp(100px, 28vw, 190px);
+  padding: 8px 8px 12px; border-radius: 28px;
+  background: var(--card); color: var(--ink);
+  font-size: clamp(26px, 6.5vmin, 42px); text-shadow: 0 3px 0 var(--paper);
+  box-shadow: 0 9px 0 var(--edge), 0 16px 26px rgba(74, 54, 87, .15);
   animation: bob 1.4s ease-in-out infinite;
 }
-.btn-start:active { box-shadow: 0 4px 0 #E0507F; animation: none; }
+.cat:nth-child(2) { animation-delay: .2s; }
+.cat:nth-child(3) { animation-delay: .4s; }
+.cat:active { box-shadow: 0 3px 0 var(--edge); animation: none; }
+.cat svg { width: 100%; height: auto; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.04); } }
 
 /* ---------- 문제 화면 ---------- */
@@ -112,6 +118,9 @@ body {
   animation: namePop .7s cubic-bezier(.3, 1.8, .5, 1) both;
 }
 .prompt small { font-size: .45em; margin-left: .3em; color: var(--ink); opacity: .7; }
+/* 이름이 긴 공룡: 글자를 줄이고 울음소리는 아랫줄로 */
+.prompt.name.long { font-size: clamp(30px, 8vmin, 64px); border-radius: 32px; max-width: 100%; }
+.prompt.name.long small { display: block; margin: 0; font-size: .6em; }
 @keyframes namePop { 0% { transform: scale(.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
 .stage {
@@ -212,6 +221,15 @@ body {
   animation: bob 1.4s ease-in-out infinite;
 }
 .btn-again:active { box-shadow: 0 4px 0 #3FA88D; animation: none; }
+.done-btns { position: relative; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.btn-home {
+  font-size: clamp(20px, 4.5vmin, 30px);
+  padding: .35em 1.1em; border-radius: 999px;
+  background: var(--paper); color: var(--ink); text-shadow: none;
+  box-shadow: 0 6px 0 var(--star-off);
+}
+.btn-home:active { box-shadow: 0 2px 0 var(--star-off); }
+.stage.sea .floor { opacity: 0; }
 
 /* 가로로 낮은 화면(휴대폰 가로) */
 @media (max-height: 520px) {
@@ -220,10 +238,13 @@ body {
   .progress { font-size: 24px; }
   .btn-reveal { width: 84px; font-size: 54px; }
   .hand { font-size: 40px; }
+  .start-art { display: none; }
+  .cat { width: clamp(96px, 20vw, 150px); }
+  .done-btns { flex-direction: row; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bg span, .stage.revealed .rays, .btn-start, .btn-again, .btn-reveal, .hand { animation: none; }
+  .bg span, .stage.revealed .rays, .cat, .btn-again, .btn-reveal, .hand { animation: none; }
 }
 </style>
 </head>
@@ -235,7 +256,7 @@ body {
   <section id="screen-start" class="screen">
     <div class="start-art" id="start-art" aria-hidden="true"></div>
     <h1 class="logo">그림자 놀이</h1>
-    <button id="btn-start" class="btn btn-start" type="button">▶ 시작하기</button>
+    <div class="cats" id="cats"></div>
   </section>
 
   <!-- 2. 문제 화면 -->
@@ -262,7 +283,10 @@ body {
     <div class="trophy" aria-hidden="true">★</div>
     <h2 class="cheer" id="cheer" aria-label="참 잘했어요!"></h2>
     <div class="parade" id="parade" aria-hidden="true"></div>
-    <button id="btn-again" class="btn btn-again" type="button">↻ 다시 하기</button>
+    <div class="done-btns">
+      <button id="btn-again" class="btn btn-again" type="button">↻ 다시 하기</button>
+      <button id="btn-home" class="btn btn-home" type="button">처음으로</button>
+    </div>
   </section>
 </main>
 
@@ -388,6 +412,210 @@ body {
         <ellipse cx="80" cy="93" rx="7" ry="4.5" fill="#FF9EAA" opacity=".8"/>`
     }
   ];
+
+  /* ---------- 공룡 ---------- */
+  const f1 = v => v.toFixed(1);
+  // 스테고사우루스 등 골판
+  const stegoPlates = Array.from({ length: 7 }, (_, i) => {
+    const x = 64 + i * 15.5;
+    const y = 120 - 32 * Math.sqrt(Math.max(0, 1 - ((x - 110) / 56) ** 2));
+    const h = 18 + 14 * Math.sin(Math.PI * (i + .5) / 7);
+    return `<path d="M${f1(x - 8)} ${f1(y + 6)} Q${f1(x - 9)} ${f1(y - h * .6)} ${f1(x)} ${f1(y - h)} Q${f1(x + 9)} ${f1(y - h * .6)} ${f1(x + 8)} ${f1(y + 6)}Z"/>`;
+  }).join('');
+  // 안킬로사우루스 등 가시
+  const ankySpikes = Array.from({ length: 9 }, (_, k) => {
+    const t = Math.PI + (k + .5) / 9 * Math.PI;
+    const cx = 100 + 60 * Math.cos(t), cy = 130 + 30 * Math.sin(t);
+    let nx = Math.cos(t) / 60, ny = Math.sin(t) / 30;
+    const L = Math.hypot(nx, ny); nx /= L; ny /= L;
+    const tx = -ny, ty = nx;
+    return `<path d="M${f1(cx + tx * 7)} ${f1(cy + ty * 7)} L${f1(cx + nx * 15)} ${f1(cy + ny * 15)} L${f1(cx - tx * 7)} ${f1(cy - ty * 7)}Z"/>`;
+  }).join('');
+  // 트리케라톱스 목 방패(프릴) 테두리
+  const triFrill = [190, 215, 240, 265, 290, 315, 340, 5].map(d => {
+    const a = d * Math.PI / 180;
+    return `<circle cx="${f1(74 + Math.cos(a) * 36)}" cy="${f1(90 + Math.sin(a) * 36)}" r="9"/>`;
+  }).join('');
+
+  const DINOS = [
+    {
+      name: '티라노사우루스', sound: '크아앙!', accent: '#3E9A3A', tint: '#DDF5D2',
+      svg: `
+        <rect x="92" y="136" width="12" height="46" rx="6" fill="#5FB252"/>
+        <ellipse cx="88" cy="184" rx="15" ry="6" fill="#5FB252"/>
+        <path d="M124 96 C150 100 178 112 198 136 C172 130 148 132 126 132Z" fill="#7CCB6B"/>
+        <g transform="rotate(-20 104 112)"><ellipse cx="104" cy="112" rx="40" ry="30" fill="#7CCB6B"/></g>
+        <g transform="rotate(-20 92 118)"><ellipse cx="92" cy="118" rx="18" ry="16" fill="#D8F2B8"/></g>
+        <g transform="rotate(30 80 82)"><ellipse cx="80" cy="82" rx="18" ry="22" fill="#7CCB6B"/></g>
+        <path d="M74 104 Q62 110 60 120" fill="none" stroke="#5FB252" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="122" cy="126" rx="22" ry="26" fill="#6CBF5C"/>
+        <rect x="114" y="140" width="14" height="42" rx="6" fill="#7CCB6B"/>
+        <ellipse cx="114" cy="184" rx="18" ry="7" fill="#7CCB6B"/>
+        <g transform="rotate(-8 56 56)"><ellipse cx="56" cy="56" rx="34" ry="23" fill="#7CCB6B"/></g>
+        <path d="M32 66 L35 73 L38 67Z M42 68 L45 75 L48 68Z M52 68 L55 74 L58 67Z" fill="#fff"/>
+        <path d="M24 64 Q48 72 80 64" fill="none" stroke="#3E7A36" stroke-width="3" stroke-linecap="round"/>
+        ${eye(60, 46, 5)}
+        <path d="M52 37 Q60 33 68 37" fill="none" stroke="#3E7A36" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="28" cy="50" r="2" fill="#3E7A36"/>
+        <ellipse cx="72" cy="58" rx="6" ry="4" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '트리케라톱스', sound: '', accent: '#7B5CD6', tint: '#ECE4FF',
+      svg: `
+        <path d="M150 112 C172 112 188 122 196 138 C178 130 166 128 148 132Z" fill="#B9A0F5"/>
+        <rect x="76" y="136" width="20" height="44" rx="8" fill="#9C82E0"/>
+        <rect x="134" y="136" width="20" height="44" rx="8" fill="#9C82E0"/>
+        <ellipse cx="122" cy="118" rx="50" ry="34" fill="#B9A0F5"/>
+        <rect x="92" y="138" width="20" height="46" rx="8" fill="#B9A0F5"/>
+        <rect x="150" y="138" width="20" height="46" rx="8" fill="#B9A0F5"/>
+        <g fill="#FF9EC4"><circle cx="74" cy="90" r="36"/>${triFrill}</g>
+        <circle cx="74" cy="90" r="24" fill="#FFC2D9"/>
+        <path d="M46 94 L22 64 L56 88Z M58 90 L40 60 L66 86Z" fill="#FFF3D6" stroke="#E8D7AE" stroke-width="2" stroke-linejoin="round"/>
+        <ellipse cx="46" cy="108" rx="28" ry="20" fill="#B9A0F5"/>
+        <path d="M26 100 L16 86 L32 98Z" fill="#FFF3D6"/>
+        <path d="M20 104 Q10 112 18 122 Q28 122 32 114Z" fill="#8A6FD6"/>
+        ${eye(46, 100, 4.5)}
+        <ellipse cx="52" cy="114" rx="6" ry="4" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '스테고사우루스', sound: '', accent: '#D9822B', tint: '#FFF0D4',
+      svg: `
+        <g fill="#FF8A7A">${stegoPlates}</g>
+        <path d="M158 112 C176 112 190 122 198 136 C182 132 168 132 154 134Z" fill="#FFC870"/>
+        <path d="M182 122 L188 104 L190 124Z M190 128 L200 112 L196 132Z" fill="#FFF3D6"/>
+        <rect x="70" y="138" width="16" height="42" rx="7" fill="#F2B154"/>
+        <rect x="128" y="136" width="16" height="46" rx="7" fill="#F2B154"/>
+        <ellipse cx="110" cy="120" rx="56" ry="32" fill="#FFC870"/>
+        <rect x="84" y="140" width="16" height="42" rx="7" fill="#FFC870"/>
+        <rect x="142" y="138" width="16" height="46" rx="7" fill="#FFC870"/>
+        <ellipse cx="60" cy="126" rx="16" ry="12" fill="#FFC870"/>
+        <ellipse cx="38" cy="132" rx="16" ry="11" fill="#FFC870"/>
+        ${eye(36, 128, 3.5)}
+        <path d="M24 136 Q30 139 36 136" fill="none" stroke="#B9732A" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="44" cy="136" rx="4.5" ry="3" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '브라키오사우루스', sound: '쿵! 쿵!', accent: '#2F8FC4', tint: '#DDF2FF',
+      svg: `
+        <path d="M164 122 C182 128 192 142 198 162 C184 150 172 144 160 142Z" fill="#8FD0F2"/>
+        <rect x="96" y="140" width="16" height="50" rx="7" fill="#72BCE4"/>
+        <rect x="140" y="140" width="16" height="50" rx="7" fill="#72BCE4"/>
+        <ellipse cx="126" cy="130" rx="44" ry="28" fill="#8FD0F2"/>
+        <path d="M96 122 C86 90 78 60 72 34" fill="none" stroke="#8FD0F2" stroke-width="22" stroke-linecap="round"/>
+        <rect x="108" y="142" width="16" height="50" rx="7" fill="#8FD0F2"/>
+        <rect x="152" y="140" width="16" height="50" rx="7" fill="#8FD0F2"/>
+        <g fill="#BFE6FA"><circle cx="118" cy="118" r="6"/><circle cx="138" cy="114" r="5"/><circle cx="150" cy="128" r="6"/><circle cx="130" cy="134" r="4"/></g>
+        <circle cx="68" cy="20" r="9" fill="#8FD0F2"/>
+        <ellipse cx="60" cy="30" rx="18" ry="12" fill="#8FD0F2"/>
+        ${eye(58, 26, 4)}
+        <path d="M44 34 Q50 38 56 35" fill="none" stroke="#2F7FAE" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="64" cy="36" rx="5" ry="3" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '안킬로사우루스', sound: '', accent: '#9A6A2E', tint: '#F5E6D0',
+      svg: `
+        <g fill="#FFF0C9" stroke="#E2CC98" stroke-width="2" stroke-linejoin="round">${ankySpikes}</g>
+        <path d="M156 132 C172 130 182 126 188 120" fill="none" stroke="#C9A06B" stroke-width="10" stroke-linecap="round"/>
+        <ellipse cx="190" cy="118" rx="10" ry="8" fill="#9A6A2E"/>
+        <rect x="58" y="146" width="16" height="30" rx="7" fill="#B38A55"/>
+        <rect x="120" y="146" width="16" height="30" rx="7" fill="#B38A55"/>
+        <ellipse cx="100" cy="130" rx="60" ry="30" fill="#C9A06B"/>
+        <g fill="#DDBB88"><circle cx="70" cy="114" r="6"/><circle cx="90" cy="108" r="6"/><circle cx="110" cy="108" r="6"/><circle cx="130" cy="114" r="6"/><circle cx="80" cy="126" r="5"/><circle cx="100" cy="122" r="5"/><circle cx="120" cy="126" r="5"/><circle cx="140" cy="128" r="5"/></g>
+        <rect x="74" y="148" width="16" height="30" rx="7" fill="#C9A06B"/>
+        <rect x="136" y="148" width="16" height="30" rx="7" fill="#C9A06B"/>
+        <path d="M46 126 L54 114 L56 130Z" fill="#FFF0C9"/>
+        <ellipse cx="34" cy="136" rx="18" ry="13" fill="#C9A06B"/>
+        ${eye(30, 132, 4)}
+        <path d="M18 140 Q24 144 30 141" fill="none" stroke="#7A5226" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="40" cy="142" rx="5" ry="3" fill="#FF9EAA" opacity=".8"/>`
+    }
+  ];
+
+  /* ---------- 고래 (모두 왼쪽을 보고 헤엄) ---------- */
+  // 꼬리지느러미: 꼬리자루 끝(176,108)에서 위아래로 갈라짐
+  const fluke = fill =>
+    `<path d="M170 104 C180 90 190 80 198 78 C194 92 190 102 186 108 C190 114 194 124 198 138 C190 136 180 126 170 112Z" fill="${fill}"/>`;
+
+  const WHALES = [
+    {
+      name: '혹등고래', sound: '', accent: '#3E64A8', tint: '#DCE8FF',
+      svg: `
+        ${fluke('#6E8FC9')}
+        <path d="M130 84 L142 72 L148 88Z" fill="#6E8FC9"/>
+        <path d="M20 100 C30 76 80 70 120 80 C150 88 168 96 178 104 L178 112 C160 116 140 122 110 124 C70 128 30 122 20 100Z" fill="#6E8FC9"/>
+        <path d="M24 108 C50 126 100 126 150 116 C110 116 60 116 24 108Z" fill="#D6E4FA"/>
+        <path d="M40 116 L120 118 M50 121 L110 122" stroke="#B3C8EC" stroke-width="2" stroke-linecap="round"/>
+        <path d="M66 114 C76 140 96 160 120 170 C106 152 94 132 86 116Z" fill="#D6E4FA" stroke="#6E8FC9" stroke-width="2.5" stroke-linejoin="round"/>
+        <g fill="#5677B3"><circle cx="30" cy="92" r="2.5"/><circle cx="38" cy="86" r="2.5"/><circle cx="48" cy="82" r="2.5"/><circle cx="58" cy="80" r="2.5"/></g>
+        ${eye(48, 100, 4.5)}
+        <path d="M22 104 Q40 112 60 109" fill="none" stroke="#3E5E99" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="56" cy="114" rx="6" ry="3.5" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '범고래', sound: '', accent: '#2E3346', tint: '#E3E8F5',
+      svg: `
+        ${fluke('#2E3346')}
+        <path d="M104 84 C108 62 112 44 118 30 C124 50 128 70 132 88Z" fill="#2E3346"/>
+        <path d="M18 108 C22 84 70 74 112 80 C146 86 166 98 178 106 L178 112 C150 124 110 132 70 130 C40 128 18 124 18 108Z" fill="#2E3346"/>
+        <path d="M22 114 C50 132 92 132 124 124 C96 120 60 122 22 114Z" fill="#FFFFFF"/>
+        <g transform="rotate(-10 60 96)"><ellipse cx="60" cy="96" rx="11" ry="5" fill="#FFFFFF"/></g>
+        <ellipse cx="124" cy="88" rx="12" ry="4.5" fill="#8A90A6"/>
+        <path d="M64 124 C62 140 72 152 84 150 C84 140 78 130 74 124Z" fill="#2E3346"/>
+        <circle cx="44" cy="100" r="5.5" fill="#FFFFFF"/>
+        ${eye(44, 100, 3.6)}
+        <path d="M20 110 Q34 117 50 114" fill="none" stroke="#8A90A6" stroke-width="2.5" stroke-linecap="round"/>`
+    },
+    {
+      name: '향유고래', sound: '', accent: '#5E627E', tint: '#E8E8F4',
+      svg: `
+        <g fill="none" stroke="#9DD6FF" stroke-width="6" stroke-linecap="round">
+          <path d="M28 60 C22 46 14 40 8 42"/><path d="M30 58 C30 42 32 32 30 22"/><path d="M32 60 C38 46 46 40 54 42"/>
+        </g>
+        <g fill="#9DD6FF"><circle cx="6" cy="52" r="4"/><circle cx="56" cy="52" r="4"/><circle cx="30" cy="12" r="4"/></g>
+        ${fluke('#8B8FA8')}
+        <path d="M126 76 Q136 64 146 80Z" fill="#8B8FA8"/>
+        <path d="M16 82 C16 66 30 62 60 62 L100 64 C140 70 166 92 178 106 L178 112 C150 120 110 126 80 124 L30 120 C18 118 16 108 16 96Z" fill="#8B8FA8"/>
+        <path d="M24 108 C30 120 60 122 82 118 C60 116 40 114 24 108Z" fill="#D9DBE8"/>
+        <path d="M70 118 C70 134 80 144 92 142 C90 132 84 124 80 120Z" fill="#7A7E98"/>
+        <path d="M100 86 Q110 82 120 88 M108 98 Q118 94 128 100 M120 108 Q130 104 140 110" fill="none" stroke="#7A7E98" stroke-width="2.5" stroke-linecap="round"/>
+        ${eye(62, 98, 4)}
+        <ellipse cx="68" cy="108" rx="6" ry="3.5" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '일각고래', sound: '', accent: '#5A6E9C', tint: '#E2EAF8',
+      svg: `
+        <path d="M44 97 L4 82 L44 105Z" fill="#FFF3D6" stroke="#D9C9A0" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M14 86 L16 90 M22 89 L24 93 M30 92 L32 96 M38 95 L40 99" stroke="#D9C9A0" stroke-width="2" stroke-linecap="round"/>
+        ${fluke('#A8B8D8')}
+        <path d="M40 104 C44 84 90 78 126 86 C152 92 168 100 178 106 L178 114 C156 122 120 128 86 126 C56 124 40 118 40 104Z" fill="#A8B8D8"/>
+        <path d="M44 112 C70 124 110 126 140 118 C110 118 76 118 44 112Z" fill="#E4EBF7"/>
+        <g fill="#7C8DB4"><circle cx="100" cy="94" r="4"/><circle cx="116" cy="100" r="3"/><circle cx="130" cy="94" r="3.5"/><circle cx="146" cy="102" r="3"/><circle cx="86" cy="100" r="2.5"/><circle cx="160" cy="104" r="2.5"/></g>
+        <path d="M76 120 C74 134 82 142 92 140 C90 132 86 126 84 122Z" fill="#8FA2C8"/>
+        ${eye(60, 100, 4.5)}
+        <path d="M44 108 Q54 113 64 110" fill="none" stroke="#5A6E9C" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="68" cy="112" rx="6" ry="3.5" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '벨루가', sound: '', accent: '#4C8DC4', tint: '#DDF2FF',
+      svg: `
+        <g fill="#F4F8FF" stroke="#B9CBE6" stroke-width="3" stroke-linejoin="round">
+          ${fluke('#F4F8FF')}
+          <path d="M22 104 C18 80 40 66 66 70 C100 74 150 88 178 104 L178 112 C150 124 100 132 66 128 C40 126 26 118 22 104Z"/>
+          <path d="M70 124 C68 138 76 148 88 146 C86 136 82 128 80 124Z"/>
+        </g>
+        <path d="M30 76 Q44 64 62 70" fill="none" stroke="#DCE7F7" stroke-width="5" stroke-linecap="round"/>
+        ${eye(48, 96, 4.5)}
+        <path d="M22 106 Q36 118 54 112" fill="none" stroke="#8FA9CF" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="56" cy="106" rx="7" ry="4" fill="#FFB3C6"/>`
+    }
+  ];
+
+  const CATS = {
+    animal: { label: '동물', question: '어떤 동물일까요?', items: ANIMALS, icon: 0, card: '#FFE3B8', edge: '#F2B66A' },
+    dino:   { label: '공룡', question: '어떤 공룡일까요?', items: DINOS,   icon: 0, card: '#DDF5D2', edge: '#8FCB80' },
+    whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true }
+  };
+
   const svgOf = (a, cls = '') =>
     `<svg class="${cls}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${a.name}">${a.svg}</svg>`;
 
@@ -501,6 +729,12 @@ body {
   $('#start-art').innerHTML =
     svgOf(ANIMALS[0], 'shadow-ico') + '<span class="arrow">→</span>' + svgOf(ANIMALS[0], 'color-ico');
 
+  // 종류 고르기 카드: 글을 몰라도 그림만 보고 고를 수 있게
+  $('#cats').innerHTML = Object.entries(CATS).map(([key, c]) =>
+    `<button class="btn cat" type="button" data-cat="${key}" style="--card:${c.card};--edge:${c.edge}">` +
+    svgOf(c.items[c.icon]) + `<span>${c.label}</span></button>`
+  ).join('');
+
   // 완료 화면 글자
   $('#cheer').innerHTML = [...'참 잘했어요!'].map((ch, i) =>
     ch === ' ' ? '<span class="gap"></span>'
@@ -513,7 +747,7 @@ body {
    * ========================================================= */
   const REVEAL_MS = 3000;   // 정답 공개 후 다음 문제까지
   const TAP_LOCK_MS = 700;  // 문제 등장 직후 연타로 바로 넘어가는 것 방지
-  let order = [], idx = 0, phase = 'start';
+  let cat = CATS.animal, order = [], idx = 0, phase = 'start';
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -521,14 +755,16 @@ body {
     return a;
   }
 
-  function startGame() {
+  function startGame(key) {
+    if (key && CATS[key]) cat = CATS[key];
     // iOS 등: 사용자 터치 안에서 소리·음성을 한 번 깨워 둔다
     audio();
     if (synth) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); }
     sfxPop();
     clearTimers();
     fwStop();
-    order = shuffle(ANIMALS);
+    elStage.classList.toggle('sea', !!cat.sea);
+    order = shuffle(cat.items);
     idx = 0;
     elProgress.innerHTML = order.map(() => '<span>★</span>').join('');
     show('quiz');
@@ -546,9 +782,9 @@ body {
     elAnimal.className = 'animal-wrap question';
     elBurst.innerHTML = '';
     elPrompt.className = 'prompt';
-    elPrompt.textContent = '어떤 동물일까요?';
+    elPrompt.textContent = cat.question;
     elTap.classList.remove('away');
-    later(() => say('어떤 동물일까요?'), 250);
+    later(() => say(cat.question), 250);
     later(() => { phase = 'question'; }, TAP_LOCK_MS);
   }
 
@@ -561,7 +797,7 @@ body {
     elAnimal.className = 'animal-wrap revealed';
     elStage.classList.add('revealed');
     elTap.classList.add('away');
-    elPrompt.className = 'prompt name';
+    elPrompt.className = 'prompt name' + (a.name.length >= 6 ? ' long' : '');
     elPrompt.style.setProperty('--accent', a.accent);
     elPrompt.innerHTML = `${a.name}!` + (a.sound ? `<small>${a.sound}</small>` : '');
     elProgress.children[idx]?.classList.add('on');
@@ -669,8 +905,16 @@ body {
   /* =========================================================
    * 6. 입력
    * ========================================================= */
-  $('#btn-start').addEventListener('click', startGame);
-  $('#btn-again').addEventListener('click', startGame);
+  $('#cats').addEventListener('click', e => {
+    const b = e.target.closest('[data-cat]');
+    if (b) startGame(b.dataset.cat);
+  });
+  $('#btn-again').addEventListener('click', () => startGame());
+  $('#btn-home').addEventListener('click', () => {
+    clearTimers(); fwStop(); if (synth) synth.cancel();
+    phase = 'start';
+    show('start');
+  });
   // 문제 화면은 아무 데나 터치해도 정답 공개
   screens.quiz.addEventListener('pointerdown', reveal);
   $('#btn-reveal').addEventListener('click', reveal); // 키보드(Enter/Space)용
