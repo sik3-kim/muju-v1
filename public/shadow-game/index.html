@@ -81,8 +81,8 @@ body {
   text-shadow: 0 5px 0 var(--paper);
 }
 /* 종류 고르기 카드 (그림 + 이름) */
-/* 좁은 화면 3+2, 넓은 화면 5칸 한 줄 */
-.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 12px; max-width: 100%; }
+/* 카드 6장: 세로 화면 3+3, 가로로 낮은 화면은 한 줄 */
+.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 12px; max-width: min(100%, 504px); }
 .cat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   width: clamp(100px, 28.5vw, 160px);
@@ -96,6 +96,7 @@ body {
 .cat:nth-child(3) { animation-delay: .4s; }
 .cat:nth-child(4) { animation-delay: .6s; }
 .cat:nth-child(5) { animation-delay: .8s; }
+.cat:nth-child(6) { animation-delay: 1s; }
 .cat:active { box-shadow: 0 3px 0 var(--edge); animation: none; }
 .cat svg { width: 82%; height: auto; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.04); } }
@@ -280,8 +281,8 @@ body {
   .hand { font-size: 40px; }
   .start-art { display: none; }
   #screen-start { gap: 20px; }
-  .cats { flex-wrap: nowrap; }
-  .cat { width: clamp(88px, 17vw, 130px); }
+  .cats { flex-wrap: nowrap; max-width: 100%; }
+  .cat { width: clamp(80px, 14vw, 120px); }
   .done-btns { flex-direction: row; }
 }
 
@@ -752,6 +753,100 @@ body {
     }
   ];
 
+  /* ---------- 곤충 ---------- */
+  // 꿀벌 줄무늬: 몸통 타원 안쪽만 칠하는 세로 띠
+  const beeStripes = [[94, 108], [122, 136], [148, 158]].map(([x1, x2]) => {
+    const yt = x => 120 - 38 * Math.sqrt(Math.max(0, 1 - ((x - 110) / 52) ** 2));
+    const yb = x => 240 - yt(x);
+    return `<path d="M${x1} ${f1(yt(x1))} L${x2} ${f1(yt(x2))} L${x2} ${f1(yb(x2))} L${x1} ${f1(yb(x1))}Z"/>`;
+  }).join('');
+
+  const INSECTS = [
+    {
+      name: '나비', sound: '', accent: '#8A6FD6', tint: '#F0E8FF',
+      svg: `
+        <path d="M96 62 Q86 42 78 32 M104 62 Q114 42 122 32" fill="none" stroke="#6B5A7E" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="78" cy="31" r="5" fill="#6B5A7E"/><circle cx="122" cy="31" r="5" fill="#6B5A7E"/>
+        <g transform="rotate(20 74 134)"><ellipse cx="74" cy="134" rx="28" ry="24" fill="#FF9EC4"/></g>
+        <g transform="rotate(-20 126 134)"><ellipse cx="126" cy="134" rx="28" ry="24" fill="#FF9EC4"/></g>
+        <g transform="rotate(-25 64 86)"><ellipse cx="64" cy="86" rx="42" ry="32" fill="#B9A0F5"/></g>
+        <g transform="rotate(25 136 86)"><ellipse cx="136" cy="86" rx="42" ry="32" fill="#B9A0F5"/></g>
+        <g fill="#FFFFFF" opacity=".85"><circle cx="54" cy="80" r="11"/><circle cx="146" cy="80" r="11"/><circle cx="72" cy="100" r="5"/><circle cx="128" cy="100" r="5"/></g>
+        <g fill="#FFD0E2"><circle cx="70" cy="138" r="8"/><circle cx="130" cy="138" r="8"/></g>
+        <ellipse cx="100" cy="112" rx="9" ry="38" fill="#6B5A7E"/>
+        <circle cx="100" cy="68" r="14" fill="#6B5A7E"/>
+        <circle cx="94" cy="66" r="4" fill="#fff"/><circle cx="106" cy="66" r="4" fill="#fff"/>
+        <circle cx="94.6" cy="66.6" r="2.4" fill="#33231A"/><circle cx="106.6" cy="66.6" r="2.4" fill="#33231A"/>
+        <path d="M95 74 Q100 78 105 74" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>`
+    },
+    {
+      name: '무당벌레', sound: '', accent: '#E04848', tint: '#FFE3DF',
+      svg: `
+        <path d="M68 100 L44 90 M64 124 L38 126 M70 148 L46 162 M132 100 L156 90 M136 124 L162 126 M130 148 L154 162" fill="none" stroke="#3A2A33" stroke-width="5" stroke-linecap="round"/>
+        <path d="M92 48 Q86 34 78 28 M108 48 Q114 34 122 28" fill="none" stroke="#3A2A33" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="77" cy="27" r="4.5" fill="#3A2A33"/><circle cx="123" cy="27" r="4.5" fill="#3A2A33"/>
+        <circle cx="100" cy="124" r="50" fill="#FF5A5A"/>
+        <path d="M100 76 V174" stroke="#3A2A33" stroke-width="3"/>
+        <g fill="#3A2A33"><circle cx="78" cy="106" r="9"/><circle cx="122" cy="106" r="9"/><circle cx="72" cy="136" r="8"/><circle cx="128" cy="136" r="8"/><circle cx="88" cy="158" r="7"/><circle cx="112" cy="158" r="7"/></g>
+        <ellipse cx="82" cy="90" rx="9" ry="5" fill="#FFFFFF" opacity=".5"/>
+        <circle cx="100" cy="64" r="22" fill="#3A2A33"/>
+        <circle cx="92" cy="61" r="6" fill="#fff"/><circle cx="108" cy="61" r="6" fill="#fff"/>
+        <circle cx="93" cy="62" r="3.5" fill="#33231A"/><circle cx="109" cy="62" r="3.5" fill="#33231A"/>
+        <path d="M94 72 Q100 77 106 72" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        <ellipse cx="86" cy="70" rx="4" ry="2.5" fill="#FF9EAA"/><ellipse cx="114" cy="70" rx="4" ry="2.5" fill="#FF9EAA"/>`
+    },
+    {
+      name: '꿀벌', sound: '윙윙!', accent: '#D99A12', tint: '#FFF4CC',
+      svg: `
+        <path d="M92 154 L88 170 M110 157 L108 173 M128 153 L131 168" fill="none" stroke="#3A2A33" stroke-width="4" stroke-linecap="round"/>
+        <path d="M160 114 L180 120 L160 126Z" fill="#3A2A33"/>
+        <ellipse cx="110" cy="120" rx="52" ry="38" fill="#FFD23F"/>
+        <g fill="#3A2A33">${beeStripes}</g>
+        <g fill="#E8F6FF" stroke="#A9D4F5" stroke-width="3" opacity=".95">
+          <g transform="rotate(-20 98 70)"><ellipse cx="98" cy="70" rx="22" ry="30"/></g>
+          <g transform="rotate(20 128 74)"><ellipse cx="128" cy="74" rx="18" ry="26"/></g>
+        </g>
+        <path d="M48 86 L38 60 M62 84 L68 58" fill="none" stroke="#3A2A33" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="38" cy="58" r="4.5" fill="#3A2A33"/><circle cx="68" cy="56" r="4.5" fill="#3A2A33"/>
+        <circle cx="56" cy="112" r="28" fill="#FFD23F"/>
+        ${eye(48, 106, 5)}
+        <path d="M38 120 Q46 126 54 121" fill="none" stroke="#B9732A" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="62" cy="120" rx="6" ry="4" fill="#FF9EAA" opacity=".85"/>`
+    },
+    {
+      name: '잠자리', sound: '', accent: '#21959A', tint: '#D9F4F5',
+      svg: `
+        <g fill="#E8F6FF" stroke="#9CCFF0" stroke-width="2.5">
+          <g transform="rotate(-10 58 72)"><ellipse cx="58" cy="72" rx="44" ry="12"/></g>
+          <g transform="rotate(10 142 72)"><ellipse cx="142" cy="72" rx="44" ry="12"/></g>
+          <g transform="rotate(8 60 96)"><ellipse cx="60" cy="96" rx="40" ry="11"/></g>
+          <g transform="rotate(-8 140 96)"><ellipse cx="140" cy="96" rx="40" ry="11"/></g>
+        </g>
+        <path d="M22 78 L94 70 M106 70 L178 78 M24 90 L94 86 M106 86 L176 90" stroke="#C3E2F7" stroke-width="2" stroke-linecap="round"/>
+        <rect x="95" y="84" width="10" height="100" rx="5" fill="#4FC3C8"/>
+        <path d="M95 104 H105 M95 120 H105 M95 136 H105 M95 152 H105 M95 168 H105" stroke="#21959A" stroke-width="2"/>
+        <ellipse cx="100" cy="76" rx="12" ry="16" fill="#4FC3C8"/>
+        <circle cx="100" cy="54" r="11" fill="#4FC3C8"/>
+        <circle cx="89" cy="46" r="11" fill="#5AA8F0"/><circle cx="111" cy="46" r="11" fill="#5AA8F0"/>
+        ${eye(89, 46, 5)}${eye(111, 46, 5)}
+        <path d="M95 59 Q100 63 105 59" fill="none" stroke="#1F6F73" stroke-width="2" stroke-linecap="round"/>`
+    },
+    {
+      name: '개미', sound: '', accent: '#8A3F2A', tint: '#F8E1D6',
+      svg: `
+        <path d="M84 116 L70 138 L60 158 M94 118 L96 142 L88 160 M104 116 L120 138 L128 156" fill="none" stroke="#8A3F2A" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M42 82 L36 62 L20 52 M54 80 L60 60 L48 46" fill="none" stroke="#8A3F2A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <ellipse cx="148" cy="114" rx="34" ry="26" fill="#B5654A"/>
+        <ellipse cx="140" cy="104" rx="10" ry="6" fill="#FFFFFF" opacity=".35"/>
+        <circle cx="116" cy="112" r="7" fill="#B5654A"/>
+        <ellipse cx="92" cy="108" rx="20" ry="13" fill="#B5654A"/>
+        <circle cx="48" cy="100" r="22" fill="#B5654A"/>
+        ${eye(42, 96, 5)}
+        <path d="M30 108 Q37 113 44 109" fill="none" stroke="#6E2E1E" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="54" cy="108" rx="5" ry="3.5" fill="#FF9EAA" opacity=".85"/>`
+    }
+  ];
+
   /* ---------- 숫자 1~10 ---------- */
   const NUM_FONT = `'Arial Rounded MT Bold','Varela Round','Nunito',Jua,'Apple SD Gothic Neo',system-ui,sans-serif`;
   const numText = (n, x, y, size, fill, dark) =>
@@ -782,6 +877,7 @@ body {
     dino:   { label: '공룡', question: '어떤 공룡일까요?', items: DINOS,   icon: 0, card: '#DDF5D2', edge: '#8FCB80' },
     whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true },
     bird:   { label: '새',   question: '어떤 새일까요?',   items: BIRDS,   icon: 0, card: '#FFE3EE', edge: '#F2A7C0' },
+    insect: { label: '곤충', question: '어떤 곤충일까요?', items: INSECTS, icon: 0, card: '#FFF3C4', edge: '#E8C95A' },
     number: { label: '숫자', question: '어떤 숫자일까요?', items: NUMBERS, iconSvg: NUM_ICON, card: '#EDE4FF', edge: '#B7A3F0' }
   };
 
