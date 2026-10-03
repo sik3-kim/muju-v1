@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FFF1E2">
-<title>동물 그림자 놀이</title>
+<title>무엇일까? 그림자 놀이</title>
 <style>
 /* Layout: 한 화면 고정 무대 — 위 별 진행표, 가운데 스포트라이트 무대, 아래 큰 터치 버튼 */
 :root {
@@ -80,12 +80,13 @@ body {
   color: var(--ink);
   text-shadow: 0 5px 0 var(--paper);
 }
+.logo small { display: block; font-size: .5em; color: var(--berry); letter-spacing: .04em; }
 /* 종류 고르기 카드 (그림 + 이름) */
-/* 카드 6장: 세로 화면 3+3, 가로로 낮은 화면은 한 줄 */
-.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 12px; max-width: min(100%, 504px); }
+/* 카드 7장: 세로 화면 4+3, 가로로 낮은 화면은 한 줄 */
+.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 10px; max-width: min(100%, 630px); }
 .cat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  width: clamp(100px, 28.5vw, 160px);
+  width: clamp(70px, 20vw, 150px);
   padding: 8px 8px 12px; border-radius: 28px;
   background: var(--card); color: var(--ink);
   font-size: clamp(26px, 6.5vmin, 42px); text-shadow: 0 3px 0 var(--paper);
@@ -97,6 +98,7 @@ body {
 .cat:nth-child(4) { animation-delay: .6s; }
 .cat:nth-child(5) { animation-delay: .8s; }
 .cat:nth-child(6) { animation-delay: 1s; }
+.cat:nth-child(7) { animation-delay: 1.2s; }
 .cat:active { box-shadow: 0 3px 0 var(--edge); animation: none; }
 .cat svg { width: 82%; height: auto; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.04); } }
@@ -145,6 +147,7 @@ body {
 .prompt {
   margin: 0; min-height: 1.3em;
   font-size: clamp(32px, 8.5vmin, 64px); line-height: 1.2; text-align: center; text-wrap: balance;
+  word-break: keep-all;
   color: var(--ink);
   text-shadow: 0 4px 0 var(--paper);
 }
@@ -281,8 +284,9 @@ body {
   .hand { font-size: 40px; }
   .start-art { display: none; }
   #screen-start { gap: 20px; }
-  .cats { flex-wrap: nowrap; max-width: 100%; }
-  .cat { width: clamp(80px, 14vw, 120px); }
+  .cats { flex-wrap: nowrap; max-width: 100%; gap: 8px; }
+  .cat { width: clamp(60px, 11.5vw, 116px); font-size: 20px; border-radius: 22px; }
+  .logo { font-size: 40px; }
   .done-btns { flex-direction: row; }
 }
 
@@ -304,7 +308,7 @@ body {
   <!-- 1. 시작 화면 -->
   <section id="screen-start" class="screen">
     <div class="start-art" id="start-art" aria-hidden="true"></div>
-    <h1 class="logo">그림자 놀이</h1>
+    <h1 class="logo"><small>무엇일까?</small>그림자 놀이</h1>
     <div class="cats" id="cats"></div>
   </section>
 
@@ -847,6 +851,86 @@ body {
     }
   ];
 
+  /* ---------- 탈것 (모두 오른쪽을 보고 달림) ---------- */
+  const wheel = (cx, cy, r) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#3A3A4A"/><circle cx="${cx}" cy="${cy}" r="${f1(r * .45)}" fill="#D9DDE8"/>`;
+
+  const VEHICLES = [
+    {
+      name: '자동차', sound: '빵빵!', accent: '#E04848', tint: '#FFE3DF',
+      svg: `
+        <path d="M58 108 L76 70 Q80 64 88 64 L128 64 Q136 64 140 70 L160 108Z" fill="#FF6B6B"/>
+        <path d="M72 104 L84 77 Q86 72 91 72 L104 72 L104 104Z M112 72 L126 72 Q130 72 132 77 L146 104 L112 104Z" fill="#BEE6FF"/>
+        <rect x="22" y="102" width="156" height="46" rx="18" fill="#FF6B6B"/>
+        <path d="M108 108 V140" stroke="#E04848" stroke-width="3" stroke-linecap="round"/>
+        <rect x="88" y="116" width="12" height="4" rx="2" fill="#E04848"/>
+        <circle cx="168" cy="118" r="7" fill="#FFE066"/>
+        <rect x="22" y="112" width="8" height="12" rx="3" fill="#FF9F43"/>
+        ${wheel(62, 150, 20)}${wheel(140, 150, 20)}`
+    },
+    {
+      name: '기차', sound: '칙칙폭폭!', accent: '#2F7CC4', tint: '#DDEEFF',
+      svg: `
+        <g fill="#E6E9F0"><circle cx="148" cy="46" r="10"/><circle cx="164" cy="30" r="13"/><circle cx="184" cy="18" r="10"/></g>
+        <path d="M136 94 L132 64 L156 64 L152 94Z" fill="#3A3A4A"/>
+        <rect x="128" y="56" width="32" height="10" rx="4" fill="#3A3A4A"/>
+        <rect x="84" y="92" width="84" height="56" rx="20" fill="#5AA8F0"/>
+        <path d="M100 92 A10 10 0 0 1 120 92Z" fill="#FFC845"/>
+        <rect x="96" y="112" width="60" height="6" rx="3" fill="#3E8FD9"/>
+        <circle cx="166" cy="104" r="6" fill="#FFE066"/>
+        <rect x="30" y="64" width="58" height="84" rx="8" fill="#FF6B6B"/>
+        <rect x="24" y="56" width="70" height="12" rx="6" fill="#3A3A4A"/>
+        <rect x="44" y="78" width="30" height="26" rx="6" fill="#BEE6FF"/>
+        <rect x="24" y="140" width="152" height="14" rx="6" fill="#3A3A4A"/>
+        <path d="M166 140 L192 162 L166 162Z" fill="#FFC845"/>
+        ${wheel(58, 160, 18)}${wheel(110, 162, 14)}${wheel(146, 162, 14)}`
+    },
+    {
+      name: '비행기', sound: '슝!', accent: '#2F7CC4', tint: '#DDF2FF',
+      svg: `
+        <path d="M92 90 L114 90 L102 60 L90 60Z" fill="#8CC8FF"/>
+        <path d="M22 94 L14 54 Q14 47 22 50 L58 90Z" fill="#5AA8F0"/>
+        <path d="M20 104 Q20 88 40 88 L150 88 Q186 88 190 106 Q186 122 150 122 L40 122 Q20 122 20 104Z" fill="#F4F8FF" stroke="#B9CBE6" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M24 110 L46 110 L34 128 L22 128Z" fill="#5AA8F0"/>
+        <path d="M160 95 Q174 95 181 105 L161 105Z" fill="#8CC8FF"/>
+        <g fill="#BEE6FF"><circle cx="62" cy="102" r="5"/><circle cx="80" cy="102" r="5"/><circle cx="98" cy="102" r="5"/><circle cx="116" cy="102" r="5"/><circle cx="134" cy="102" r="5"/></g>
+        <path d="M30 114 H170" stroke="#5AA8F0" stroke-width="4" stroke-linecap="round"/>
+        <path d="M84 112 L122 112 L98 160 L80 160Z" fill="#3E8FD9"/>`
+    },
+    {
+      name: '헬리콥터', sound: '두두두두!', accent: '#D99A12', tint: '#FFF4CC',
+      svg: `
+        <rect x="30" y="40" width="144" height="7" rx="3.5" fill="#3A3A4A"/>
+        <rect x="98" y="45" width="8" height="18" fill="#3A3A4A"/>
+        <path d="M76 150 L80 136 M136 150 L132 136" stroke="#3A3A4A" stroke-width="5" stroke-linecap="round"/>
+        <path d="M62 150 H160 Q170 150 172 142" fill="none" stroke="#3A3A4A" stroke-width="6" stroke-linecap="round"/>
+        <path d="M70 92 L22 96 L22 106 L72 114Z" fill="#FFC845"/>
+        <path d="M14 78 L28 78 L30 108 L18 108Z" fill="#FF9F43"/>
+        <path d="M21 66 V96" stroke="#3A3A4A" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="112" cy="100" rx="48" ry="38" fill="#FFC845"/>
+        <path d="M120 70 Q156 72 159 104 L120 104Z" fill="#BEE6FF"/>
+        <path d="M66 112 Q112 124 158 112" fill="none" stroke="#FF9F43" stroke-width="6" stroke-linecap="round"/>
+        <path d="M100 76 V122" stroke="#E0A92E" stroke-width="3" stroke-linecap="round"/>`
+    },
+    {
+      name: '포크레인', sound: '부릉부릉!', accent: '#D9822B', tint: '#FFF0D4',
+      svg: `
+        <path d="M110 112 L150 52" stroke="#FFC845" stroke-width="16" stroke-linecap="round"/>
+        <path d="M150 52 L176 110" stroke="#F2B33D" stroke-width="12" stroke-linecap="round"/>
+        <path d="M124 100 L146 70" stroke="#9AA0B4" stroke-width="5" stroke-linecap="round"/>
+        <path d="M168 104 L192 102 L188 134 Q178 142 166 128Z" fill="#F2A541"/>
+        <path d="M168 129 l4 7 4 -6 4 7 4 -6" fill="none" stroke="#3A3A4A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="150" cy="52" r="6" fill="#3A3A4A"/><circle cx="176" cy="110" r="5" fill="#3A3A4A"/>
+        <rect x="22" y="116" width="16" height="28" rx="5" fill="#F2A541"/>
+        <rect x="30" y="108" width="100" height="40" rx="8" fill="#FFC845"/>
+        <circle cx="112" cy="114" r="6" fill="#3A3A4A"/>
+        <rect x="38" y="62" width="50" height="52" rx="8" fill="#FFC845"/>
+        <rect x="47" y="70" width="32" height="28" rx="5" fill="#BEE6FF"/>
+        <rect x="24" y="146" width="114" height="30" rx="15" fill="#3A3A4A"/>
+        <g fill="#8A90A6"><circle cx="40" cy="161" r="8"/><circle cx="64" cy="161" r="8"/><circle cx="88" cy="161" r="8"/><circle cx="112" cy="161" r="8"/></g>`
+    }
+  ];
+
   /* ---------- 숫자 1~10 ---------- */
   const NUM_FONT = `'Arial Rounded MT Bold','Varela Round','Nunito',Jua,'Apple SD Gothic Neo',system-ui,sans-serif`;
   const numText = (n, x, y, size, fill, dark) =>
@@ -878,6 +962,7 @@ body {
     whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true },
     bird:   { label: '새',   question: '어떤 새일까요?',   items: BIRDS,   icon: 0, card: '#FFE3EE', edge: '#F2A7C0' },
     insect: { label: '곤충', question: '어떤 곤충일까요?', items: INSECTS, icon: 0, card: '#FFF3C4', edge: '#E8C95A' },
+    vehicle:{ label: '탈것', question: '어떤 탈것일까요?', items: VEHICLES, icon: 0, card: '#FFE0DC', edge: '#F0A096' },
     number: { label: '숫자', question: '어떤 숫자일까요?', items: NUMBERS, iconSvg: NUM_ICON, card: '#EDE4FF', edge: '#B7A3F0' }
   };
 
@@ -1177,7 +1262,8 @@ body {
     elAnimal.className = 'animal-wrap revealed';
     elStage.classList.add('revealed');
     elTap.classList.add('away');
-    elPrompt.className = 'prompt name' + (a.name.length >= 6 ? ' long' : '');
+    const isLong = a.name.length >= 6 || (a.name.length >= 4 && a.sound);
+    elPrompt.className = 'prompt name' + (isLong ? ' long' : '');
     elPrompt.style.setProperty('--accent', a.accent);
     elPrompt.innerHTML = (a.show || `${a.name}!`) + (a.sound ? `<small>${a.sound}</small>` : '');
     elProgress.children[idx]?.classList.add('on');
