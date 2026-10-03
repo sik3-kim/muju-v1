@@ -124,7 +124,16 @@ body {
 .btn-music .slash { display: none; }
 .btn-music.off { color: var(--ink); opacity: .55; }
 .btn-music.off .slash { display: inline; }
-.voice-note { margin: 0; max-width: 32em; text-align: center; font-size: 15px; line-height: 1.5; color: var(--ink); opacity: .75; text-wrap: balance; }
+.voice-note {
+  position: fixed; z-index: 3; left: 16px; right: 16px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto; max-width: 32em; padding: 6px 12px; border-radius: 14px;
+  background: rgba(255, 255, 255, .85); color: var(--ink);
+  text-align: center; font-size: 14px; line-height: 1.45; text-wrap: balance;
+  pointer-events: none;
+}
+/* 손가락이 조금 움직여도 '떼는 순간(pointerup)'이 꼭 오도록 */
+#screen-quiz { touch-action: none; }
 .btn-back svg { width: 28px; height: 28px; }
 .progress { display: flex; gap: 10px; font-size: clamp(28px, 7vmin, 44px); line-height: 1; }
 .progress span { color: var(--star-off); text-shadow: 0 3px 0 var(--paper); transition: color .3s; }
@@ -288,13 +297,14 @@ body {
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.8" fill="currentColor"/><circle cx="16.5" cy="16" r="2.8" fill="currentColor"/><path class="slash" d="M4 3l17 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
 </button>
 
+<p class="voice-note" id="voice-note" role="status" hidden></p>
+
 <main id="app">
   <!-- 1. 시작 화면 -->
   <section id="screen-start" class="screen">
     <div class="start-art" id="start-art" aria-hidden="true"></div>
     <h1 class="logo">그림자 놀이</h1>
     <div class="cats" id="cats"></div>
-    <p class="voice-note" id="voice-note" hidden>이 기기에서 한국어 음성을 찾지 못해 정답을 소리로 읽어 주지 못해요.</p>
   </section>
 
   <!-- 2. 문제 화면 -->
@@ -797,17 +807,70 @@ body {
   const VOICE_ASK = { rate: 0.95, pitch: 1.35 };
   const VOICE_BABY = { rate: 0.9, pitch: 1.9 };
 
-  // 터치 핸들러 안에서 바로 불러야 휴대폰(특히 iPhone)에서 소리가 확실히 난다
-  function say(text, { rate, pitch } = VOICE_ASK) {
-    if (!synth || !text) return;
-    if (synth.speaking || synth.pending) synth.cancel();
+  /* 음성이 안 나오는 흔한 원인 대비
+   *  1) 앞 음성을 cancel() 한 직후 바로 speak() 하면 크롬·사파리가 새 음성을 버린다 → 잠깐 쉬고 말하기
+   *  2) 크롬 안드로이드는 음성 객체 참조가 없으면 중간에 버린다 → curUtter 로 붙잡아 두기
+   *  3) 고른 한국어 음성이 기기에서 실제로는 안 나올 수 있다 → 2초 안에 시작 안 하면 기본 음성으로 다시 */
+  let curUtter = null;
+  let useChosenVoice = true;   // 고른 음성이 실패하면 false (기기 기본 한국어 음성 사용)
+  let speechWorked = false;    // 한 번이라도 실제로 소리가 시작됐는지
+  let sayId = 0;               // 가장 최근 say() 번호: 늦게 도착한 옛 재시도가 새 말을 덮지 않게
+  let failStreak = 0;          // 연속으로 소리가 시작되지 않은 횟수
+  const START_TIMEOUT = 2000;
+
+  function speakNow(text, rate, pitch, withVoice, id, onFail) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ko-KR';
-    if (koVoice) u.voice = koVoice;
+    if (withVoice && koVoice) u.voice = koVoice;
     u.rate = rate; u.pitch = pitch; u.volume = 1;
-    u.onstart = () => bgmDuck(true);
-    u.onend = u.onerror = () => bgmDuck(false);
+    let started = false, failed = false;
+    const fail = () => {
+      if (failed || started) return;
+      failed = true;
+      failStreak++;
+      if (!speechWorked && failStreak >= 2) showVoiceNote('blocked');
+      if (id === sayId && onFail) onFail();
+    };
+    u.onstart = () => {
+      started = true; speechWorked = true; failStreak = 0;
+      if (!withVoice) useChosenVoice = false;
+      if (noteKind === 'blocked') document.getElementById('voice-note').hidden = true;
+      bgmDuck(true);
+    };
+    u.onend = () => bgmDuck(false);
+    u.onerror = e => { bgmDuck(false); if (e.error !== 'interrupted' && e.error !== 'canceled') fail(); };
+    curUtter = u;
+    synth.resume(); // 크롬이 '일시정지'에 걸려 있는 경우 풀어 준다
     synth.speak(u);
+    setTimeout(fail, START_TIMEOUT);
+  }
+
+  function say(text, { rate, pitch } = VOICE_ASK) {
+    if (!synth || !text) return;
+    const id = ++sayId;
+    const retry = () => {
+      synth.cancel();
+      setTimeout(() => { if (id === sayId) speakNow(text, rate, Math.min(pitch, 1.6), false, id, null); }, 150);
+    };
+    const go = () => {
+      if (id !== sayId) return;
+      speakNow(text, rate, pitch, useChosenVoice, id, useChosenVoice && koVoice ? retry : null);
+    };
+    if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(go, 150); }
+    else go();
+  }
+
+  // 보호자용 안내 (화면 맨 아래)
+  const VOICE_NOTES = {
+    none: '이 기기에서 한국어 음성을 찾지 못해 정답을 소리로 읽어 주지 못해요.',
+    blocked: '이 화면에서는 음성 읽기가 나오지 않아요. 휴대폰의 크롬이나 사파리 브라우저에서 열어 보세요.'
+  };
+  let noteKind = '';
+  function showVoiceNote(kind) {
+    noteKind = kind;
+    const el = document.getElementById('voice-note');
+    el.textContent = VOICE_NOTES[kind];
+    el.hidden = false;
   }
   // 말이 끝날 때까지(최대 maxMs) 기다린 뒤 cb
   function afterSpeech(cb, maxMs = 2500) {
@@ -1173,7 +1236,7 @@ body {
 
   // 이 기기에 한국어 음성이 없으면 첫 화면에 보호자용 안내
   setTimeout(() => {
-    if (!synth || (voicesSeen && !koVoice)) $('#voice-note').hidden = false;
+    if (!synth || (voicesSeen && !koVoice)) showVoiceNote('none');
   }, 1500);
 })();
 </script>
