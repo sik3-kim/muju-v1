@@ -111,6 +111,20 @@ body {
   box-shadow: 0 5px 0 var(--star-off), 0 8px 16px rgba(74, 54, 87, .12);
 }
 .btn-back:active { box-shadow: 0 1px 0 var(--star-off); }
+.btn-music {
+  position: fixed; z-index: 3;
+  top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px));
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper); color: var(--berry);
+  box-shadow: 0 5px 0 var(--star-off), 0 8px 16px rgba(74, 54, 87, .12);
+}
+.btn-music:active { box-shadow: 0 1px 0 var(--star-off); }
+.btn-music svg { width: 28px; height: 28px; }
+.btn-music .slash { display: none; }
+.btn-music.off { color: var(--ink); opacity: .55; }
+.btn-music.off .slash { display: inline; }
+.voice-note { margin: 0; max-width: 32em; text-align: center; font-size: 15px; line-height: 1.5; color: var(--ink); opacity: .75; text-wrap: balance; }
 .btn-back svg { width: 28px; height: 28px; }
 .progress { display: flex; gap: 10px; font-size: clamp(28px, 7vmin, 44px); line-height: 1; }
 .progress span { color: var(--star-off); text-shadow: 0 3px 0 var(--paper); transition: color .3s; }
@@ -270,12 +284,17 @@ body {
 <body>
 <div class="bg" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
 
+<button id="btn-music" class="btn btn-music" type="button" aria-label="배경음악 켜기/끄기" aria-pressed="true">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.8" fill="currentColor"/><circle cx="16.5" cy="16" r="2.8" fill="currentColor"/><path class="slash" d="M4 3l17 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+</button>
+
 <main id="app">
   <!-- 1. 시작 화면 -->
   <section id="screen-start" class="screen">
     <div class="start-art" id="start-art" aria-hidden="true"></div>
     <h1 class="logo">그림자 놀이</h1>
     <div class="cats" id="cats"></div>
+    <p class="voice-note" id="voice-note" hidden>이 기기에서 한국어 음성을 찾지 못해 정답을 소리로 읽어 주지 못해요.</p>
   </section>
 
   <!-- 2. 문제 화면 -->
@@ -734,12 +753,11 @@ body {
     ['#8F7CF0', '#5F4CC4', '#E8E3FF'], ['#E67AD8', '#B54CA8', '#FBE3F7'], ['#FF7B6B', '#D94C3E', '#FFE3DF'],
     ['#3FBF8F', '#1F8F65', '#D9F5EA']
   ];
-  const SINO = ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구', '십'];
   const NATIVE = ['하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
   const NUMBERS = NUM_COLORS.map(([c, d, t], i) => {
     const n = i + 1;
     return {
-      name: String(n), show: String(n), sound: NATIVE[i], say: `${SINO[i]}! ${NATIVE[i]}!`,
+      name: String(n), show: String(n), sound: NATIVE[i], say: `${NATIVE[i]}!`,
       accent: d, tint: t,
       svg: numText(n, 100, 104, n >= 10 ? 130 : 170, c, d)
     };
@@ -764,23 +782,32 @@ body {
    * 2. 소리: 음성(speechSynthesis) + 효과음(Web Audio)
    * ========================================================= */
   const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
-  let koVoice = null;
+  let koVoice = null, voicesSeen = false;
   function pickVoice() {
     if (!synth) return;
     const vs = synth.getVoices();
-    koVoice = vs.find(v => /^ko/i.test(v.lang) && /yuna|sora|heami|google|female/i.test(v.name))
+    if (vs.length) voicesSeen = true;
+    // 여성 음성을 먼저 고른다 (높은 음으로 올렸을 때 아기 목소리에 더 가깝다)
+    koVoice = vs.find(v => /^ko/i.test(v.lang) && /yuna|sora|heami|google|female|여/i.test(v.name))
            || vs.find(v => /^ko/i.test(v.lang)) || null;
   }
   if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
 
-  function say(text, { rate = 0.9, pitch = 1.25 } = {}) {
+  // 목소리 두 가지: 문제를 묻는 언니/누나 목소리, 정답을 말하는 아기 목소리
+  const VOICE_ASK = { rate: 0.95, pitch: 1.35 };
+  const VOICE_BABY = { rate: 0.9, pitch: 1.9 };
+
+  // 터치 핸들러 안에서 바로 불러야 휴대폰(특히 iPhone)에서 소리가 확실히 난다
+  function say(text, { rate, pitch } = VOICE_ASK) {
     if (!synth || !text) return;
-    synth.cancel();
+    if (synth.speaking || synth.pending) synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ko-KR';
     if (koVoice) u.voice = koVoice;
     u.rate = rate; u.pitch = pitch; u.volume = 1;
-    setTimeout(() => synth.speak(u), 60); // cancel 직후 speak 가 무시되는 크롬 버그 회피
+    u.onstart = () => bgmDuck(true);
+    u.onend = u.onerror = () => bgmDuck(false);
+    synth.speak(u);
   }
   // 말이 끝날 때까지(최대 maxMs) 기다린 뒤 cb
   function afterSpeech(cb, maxMs = 2500) {
@@ -804,17 +831,20 @@ body {
     if (ac.state === 'suspended') ac.resume();
     return ac;
   }
-  function tone(freq, at, dur, type = 'triangle', vol = 0.16) {
-    const c = audio(); if (!c) return;
-    const t = c.currentTime + at;
-    const o = c.createOscillator(), g = c.createGain();
+  // t: 절대 시각(ac.currentTime 기준)
+  function note(freq, t, dur, type, vol, dest) {
+    const o = ac.createOscillator(), g = ac.createGain();
     o.type = type;
     o.frequency.setValueAtTime(freq, t);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(master);
+    o.connect(g).connect(dest);
     o.start(t); o.stop(t + dur + 0.05);
+  }
+  function tone(freq, at, dur, type = 'triangle', vol = 0.16) {
+    const c = audio(); if (!c) return;
+    note(freq, c.currentTime + at, dur, type, vol, master);
   }
   function sfxPop() {
     const c = audio(); if (!c) return;
@@ -830,17 +860,65 @@ body {
     const hi = [1568, 1760, 2093, 2349, 2637];
     for (let i = 0; i < count; i++) tone(hi[Math.floor(Math.random() * hi.length)], from + i * 0.07, 0.18, 'sine', 0.06);
   }
-  // 정답 축하음: 도-미-솔-도~
-  function sfxFanfare() {
-    [523, 659, 784].forEach((f, i) => tone(f, 0.05 + i * 0.1, 0.18));
-    [1047, 784, 659].forEach(f => tone(f, 0.35, 0.6, 'triangle', 0.12));
-    sparkle(0.4, 6);
-  }
   // 완료 축하 멜로디
   function sfxFinale() {
     [[392, 0], [523, .15], [659, .3], [784, .45], [659, .65], [784, .8]].forEach(([f, t]) => tone(f, t, 0.2));
     [523, 659, 784, 1047].forEach(f => tone(f, 1.0, 1.1, 'triangle', 0.1));
     sparkle(1.05, 10);
+  }
+
+  /* ---------- 배경음악: 오르골 느낌의 8마디 반복 (120bpm, 8분음표 64칸 = 16초) ---------- */
+  const _ = null;
+  const BGM_MELODY = [
+    72, _, 76, _, 79, _, 76, _,   77, _, 81, _, 79, _, _, _,
+    76, _, 79, _, 84, _, 79, _,   77, 76, 74, _, 72, _, _, _,
+    74, _, 77, _, 81, _, 77, _,   79, _, 76, _, 72, _, 76, _,
+    77, 79, 81, 79, 77, 76, 74, 76, 72, _, 79, _, 72, _, _, _
+  ];
+  const BGM_BASS = [48, 53, 48, 55, 50, 48, 53, 48]; // 마디별 근음 (C F C G Dm C F C)
+  const EIGHTH = 0.25, BGM_VOL = 0.5, BGM_DUCK = 0.15;
+  const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+  const bgm = { on: true, playing: false, gain: null, step: 0, nextT: 0, timer: 0 };
+  try { bgm.on = localStorage.getItem('shadow-bgm') !== 'off'; } catch (e) { /* 저장소를 못 쓰면 켜진 채로 */ }
+
+  function bgmStep(i, t) {
+    const m = BGM_MELODY[i];
+    if (m) {
+      note(midi(m), t, 0.45, 'sine', 0.12, bgm.gain);           // 오르골 본음
+      note(midi(m + 12), t, 0.18, 'triangle', 0.03, bgm.gain);  // 반짝이는 배음
+    }
+    const bar = Math.floor(i / 8), beat = i % 8;
+    let root = BGM_BASS[bar];
+    if (bar === 6 && beat >= 4) root = 55;                       // 7마디 뒤 절반은 G
+    if (beat === 0) note(midi(root), t, 0.5, 'triangle', 0.09, bgm.gain);
+    if (beat === 4) note(midi(root + 7), t, 0.4, 'triangle', 0.07, bgm.gain);
+  }
+  function bgmTick() {
+    if (!ac) return;
+    while (bgm.nextT < ac.currentTime + 0.2) {
+      bgmStep(bgm.step, bgm.nextT);
+      bgm.nextT += EIGHTH;
+      bgm.step = (bgm.step + 1) % BGM_MELODY.length;
+    }
+  }
+  function bgmStart() {
+    if (!bgm.on || bgm.playing) return;
+    const c = audio(); if (!c) return;
+    if (!bgm.gain) { bgm.gain = c.createGain(); bgm.gain.gain.value = BGM_VOL; bgm.gain.connect(master); }
+    bgm.playing = true;
+    bgm.step = 0;
+    bgm.nextT = c.currentTime + 0.1;
+    bgmTick();
+    bgm.timer = setInterval(bgmTick, 50);
+  }
+  function bgmStop() {
+    clearInterval(bgm.timer);
+    bgm.playing = false;
+  }
+  // 말하는 동안에는 배경음악을 작게
+  function bgmDuck(down) {
+    if (!bgm.gain || !ac) return;
+    bgm.gain.gain.setTargetAtTime(down ? BGM_DUCK : BGM_VOL, ac.currentTime, 0.08);
   }
 
   /* =========================================================
@@ -904,6 +982,7 @@ body {
     sfxPop();
     clearTimers();
     fwStop();
+    bgmStart();
     elStage.classList.toggle('sea', !!cat.sea);
     order = shuffle(cat.items);
     idx = 0;
@@ -934,8 +1013,8 @@ body {
     if (phase !== 'question') return;
     phase = 'reveal';
     const a = order[idx];
-    sfxPop();
-    sfxFanfare();
+    // 효과음 없이 아기 목소리로 정답만 (터치 순간 바로 말해야 휴대폰에서 막히지 않는다)
+    say(a.say || (a.sound ? `${a.name}! ${a.sound}` : `${a.name}!`), VOICE_BABY);
     elAnimal.className = 'animal-wrap revealed';
     elStage.classList.add('revealed');
     elTap.classList.add('away');
@@ -945,7 +1024,6 @@ body {
     elProgress.children[idx]?.classList.add('on');
     burst();
     later(burst, 1300);
-    later(() => say(a.say || (a.sound ? `${a.name}! ${a.sound}` : `${a.name}!`), { rate: 0.85, pitch: 1.3 }), 300);
     later(() => afterSpeech(leave), REVEAL_MS);
   }
 
@@ -966,9 +1044,10 @@ body {
       svgOf(a).replace('<svg ', `<svg style="animation-delay:${i * 0.12}s" `)).join('');
     $('#parade').classList.toggle('many', order.length > 5);
     show('done');
+    bgmStop();
     fwStart();
     sfxFinale();
-    later(() => say('참 잘했어요!', { rate: 0.85, pitch: 1.35 }), 900);
+    later(() => say('참 잘했어요!', VOICE_BABY), 900);
   }
 
   // 별·하트가 사방으로 튀는 효과
@@ -1057,13 +1136,14 @@ body {
     clearTimers(); fwStop(); if (synth) synth.cancel();
     phase = 'start';
     show('start');
+    bgmStart();
   }
   $('#btn-home').addEventListener('click', goHome);
   // 문제 화면은 아무 데나 누르면 정답 공개이므로, 집 버튼 터치는 거기로 새지 않게 막는다
-  $('#btn-back').addEventListener('pointerdown', e => e.stopPropagation());
+  $('#btn-back').addEventListener('pointerup', e => e.stopPropagation());
   $('#btn-back').addEventListener('click', e => { e.stopPropagation(); goHome(); });
   // 문제 화면은 아무 데나 터치해도 정답 공개
-  screens.quiz.addEventListener('pointerdown', reveal);
+  screens.quiz.addEventListener('pointerup', reveal);
   $('#btn-reveal').addEventListener('click', reveal); // 키보드(Enter/Space)용
   document.addEventListener('keydown', e => {
     if ((e.key === ' ' || e.key === 'Enter') && !screens.quiz.hidden && e.target === document.body) { e.preventDefault(); reveal(); }
@@ -1071,7 +1151,30 @@ body {
   // 아이가 길게 누르거나 두 손가락으로 확대하는 것 막기
   document.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('gesturestart', e => e.preventDefault());
-  document.addEventListener('visibilitychange', () => { if (document.hidden && synth) synth.cancel(); });
+  // 배경음악 켜기/끄기 (모든 화면 왼쪽 위)
+  const elMusic = $('#btn-music');
+  function paintMusic() {
+    elMusic.setAttribute('aria-pressed', String(bgm.on));
+    elMusic.classList.toggle('off', !bgm.on);
+  }
+  elMusic.addEventListener('click', () => {
+    bgm.on = !bgm.on;
+    try { localStorage.setItem('shadow-bgm', bgm.on ? 'on' : 'off'); } catch (e) { /* 무시 */ }
+    if (bgm.on && phase !== 'done') bgmStart(); else bgmStop();
+    paintMusic();
+  });
+  paintMusic();
+
+  // 앱을 내리면 소리를 멈추고, 돌아오면 배경음악만 다시
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (synth) synth.cancel(); bgmStop(); }
+    else if (ac && phase !== 'done') bgmStart();
+  });
+
+  // 이 기기에 한국어 음성이 없으면 첫 화면에 보호자용 안내
+  setTimeout(() => {
+    if (!synth || (voicesSeen && !koVoice)) $('#voice-note').hidden = false;
+  }, 1500);
 })();
 </script>
 </body>
