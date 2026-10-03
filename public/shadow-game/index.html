@@ -81,10 +81,12 @@ body {
   text-shadow: 0 5px 0 var(--paper);
 }
 /* 종류 고르기 카드 (그림 + 이름) */
-.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 100%; }
+/* 좁은 화면 2×2, 넓은 화면 4칸 한 줄 */
+.cats { display: grid; grid-template-columns: repeat(2, auto); justify-content: center; gap: 18px 14px; max-width: 100%; }
+@media (min-width: 720px) { .cats { grid-template-columns: repeat(4, auto); } }
 .cat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  width: clamp(100px, 28vw, 190px);
+  width: clamp(110px, 38vw, 170px);
   padding: 8px 8px 12px; border-radius: 28px;
   background: var(--card); color: var(--ink);
   font-size: clamp(26px, 6.5vmin, 42px); text-shadow: 0 3px 0 var(--paper);
@@ -93,14 +95,16 @@ body {
 }
 .cat:nth-child(2) { animation-delay: .2s; }
 .cat:nth-child(3) { animation-delay: .4s; }
+.cat:nth-child(4) { animation-delay: .6s; }
 .cat:active { box-shadow: 0 3px 0 var(--edge); animation: none; }
-.cat svg { width: 100%; height: auto; }
+.cat svg { width: 82%; height: auto; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.04); } }
 
 /* ---------- 문제 화면 ---------- */
 .progress { display: flex; gap: 10px; font-size: clamp(28px, 7vmin, 44px); line-height: 1; }
 .progress span { color: var(--star-off); text-shadow: 0 3px 0 var(--paper); transition: color .3s; }
 .progress span.on { color: var(--sun); animation: starPop .6s cubic-bezier(.3, 1.8, .5, 1); }
+.progress.many { gap: 4px; font-size: clamp(20px, 5vmin, 32px); }
 @keyframes starPop { 0% { transform: scale(.4) rotate(-60deg); } 100% { transform: scale(1) rotate(0); } }
 
 .prompt {
@@ -212,6 +216,8 @@ body {
 @keyframes spinStar { 0%, 100% { transform: rotate(-12deg) scale(1); } 50% { transform: rotate(12deg) scale(1.12); } }
 .parade { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 2vmin; max-width: 100%; }
 .parade svg { width: min(16vmin, 96px); height: auto; animation: hop .5s ease-in-out infinite alternate; }
+.parade.many { max-width: min(100%, 560px); }
+.parade.many svg { width: min(14vmin, 80px); }
 .btn-again {
   position: relative;
   font-size: clamp(32px, 7.5vmin, 56px);
@@ -239,7 +245,9 @@ body {
   .btn-reveal { width: 84px; font-size: 54px; }
   .hand { font-size: 40px; }
   .start-art { display: none; }
-  .cat { width: clamp(96px, 20vw, 150px); }
+  #screen-start { gap: 20px; }
+  .cats { grid-template-columns: repeat(4, auto); }
+  .cat { width: clamp(96px, 20vw, 140px); }
   .done-btns { flex-direction: row; }
 }
 
@@ -610,10 +618,37 @@ body {
     }
   ];
 
+  /* ---------- 숫자 1~10 ---------- */
+  const NUM_FONT = `'Arial Rounded MT Bold','Varela Round','Nunito',Jua,'Apple SD Gothic Neo',system-ui,sans-serif`;
+  const numText = (n, x, y, size, fill, dark) =>
+    `<text x="${x + size * .035}" y="${y + size * .035}" text-anchor="middle" dominant-baseline="central" font-size="${size}" font-weight="900" font-family="${NUM_FONT}" fill="${dark}">${n}</text>` +
+    `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${size}" font-weight="900" font-family="${NUM_FONT}" fill="${fill}" stroke="#fff" stroke-width="${size * .035}" stroke-linejoin="round" paint-order="stroke">${n}</text>`;
+  const NUM_COLORS = [ // [글자색, 그림자·이름색, 배경 원]
+    ['#FF6F9C', '#D9467A', '#FFE0EA'], ['#FF9E57', '#D9732B', '#FFEBD9'], ['#FFC845', '#D99A12', '#FFF4CC'],
+    ['#6CCB6B', '#3E9A3A', '#E0F5DA'], ['#4FC3C8', '#21959A', '#D9F4F5'], ['#5AA8F0', '#2F7CC4', '#DDEEFF'],
+    ['#8F7CF0', '#5F4CC4', '#E8E3FF'], ['#E67AD8', '#B54CA8', '#FBE3F7'], ['#FF7B6B', '#D94C3E', '#FFE3DF'],
+    ['#3FBF8F', '#1F8F65', '#D9F5EA']
+  ];
+  const SINO = ['일', '이', '삼', '사', '오', '육', '칠', '팔', '구', '십'];
+  const NATIVE = ['하나', '둘', '셋', '넷', '다섯', '여섯', '일곱', '여덟', '아홉', '열'];
+  const NUMBERS = NUM_COLORS.map(([c, d, t], i) => {
+    const n = i + 1;
+    return {
+      name: String(n), show: String(n), sound: NATIVE[i], say: `${SINO[i]}! ${NATIVE[i]}!`,
+      accent: d, tint: t,
+      svg: numText(n, 100, 104, n >= 10 ? 130 : 170, c, d)
+    };
+  });
+  const NUM_ICON = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">` +
+    numText(1, 46, 104, 92, NUM_COLORS[0][0], NUM_COLORS[0][1]) +
+    numText(2, 100, 104, 92, NUM_COLORS[2][0], NUM_COLORS[2][1]) +
+    numText(3, 154, 104, 92, NUM_COLORS[5][0], NUM_COLORS[5][1]) + `</svg>`;
+
   const CATS = {
     animal: { label: '동물', question: '어떤 동물일까요?', items: ANIMALS, icon: 0, card: '#FFE3B8', edge: '#F2B66A' },
     dino:   { label: '공룡', question: '어떤 공룡일까요?', items: DINOS,   icon: 0, card: '#DDF5D2', edge: '#8FCB80' },
-    whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true }
+    whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true },
+    number: { label: '숫자', question: '어떤 숫자일까요?', items: NUMBERS, iconSvg: NUM_ICON, card: '#EDE4FF', edge: '#B7A3F0' }
   };
 
   const svgOf = (a, cls = '') =>
@@ -732,7 +767,7 @@ body {
   // 종류 고르기 카드: 글을 몰라도 그림만 보고 고를 수 있게
   $('#cats').innerHTML = Object.entries(CATS).map(([key, c]) =>
     `<button class="btn cat" type="button" data-cat="${key}" style="--card:${c.card};--edge:${c.edge}">` +
-    svgOf(c.items[c.icon]) + `<span>${c.label}</span></button>`
+    (c.iconSvg || svgOf(c.items[c.icon])) + `<span>${c.label}</span></button>`
   ).join('');
 
   // 완료 화면 글자
@@ -767,6 +802,7 @@ body {
     order = shuffle(cat.items);
     idx = 0;
     elProgress.innerHTML = order.map(() => '<span>★</span>').join('');
+    elProgress.classList.toggle('many', order.length > 5);
     show('quiz');
     showQuestion();
   }
@@ -799,11 +835,11 @@ body {
     elTap.classList.add('away');
     elPrompt.className = 'prompt name' + (a.name.length >= 6 ? ' long' : '');
     elPrompt.style.setProperty('--accent', a.accent);
-    elPrompt.innerHTML = `${a.name}!` + (a.sound ? `<small>${a.sound}</small>` : '');
+    elPrompt.innerHTML = (a.show || `${a.name}!`) + (a.sound ? `<small>${a.sound}</small>` : '');
     elProgress.children[idx]?.classList.add('on');
     burst();
     later(burst, 1300);
-    later(() => say(a.sound ? `${a.name}! ${a.sound}` : `${a.name}!`, { rate: 0.85, pitch: 1.3 }), 300);
+    later(() => say(a.say || (a.sound ? `${a.name}! ${a.sound}` : `${a.name}!`), { rate: 0.85, pitch: 1.3 }), 300);
     later(() => afterSpeech(leave), REVEAL_MS);
   }
 
@@ -822,6 +858,7 @@ body {
     phase = 'done';
     $('#parade').innerHTML = order.map((a, i) =>
       svgOf(a).replace('<svg ', `<svg style="animation-delay:${i * 0.12}s" `)).join('');
+    $('#parade').classList.toggle('many', order.length > 5);
     show('done');
     fwStart();
     sfxFinale();
