@@ -81,12 +81,11 @@ body {
   text-shadow: 0 5px 0 var(--paper);
 }
 /* 종류 고르기 카드 (그림 + 이름) */
-/* 좁은 화면 2×2, 넓은 화면 4칸 한 줄 */
-.cats { display: grid; grid-template-columns: repeat(2, auto); justify-content: center; gap: 18px 14px; max-width: 100%; }
-@media (min-width: 720px) { .cats { grid-template-columns: repeat(4, auto); } }
+/* 좁은 화면 3+2, 넓은 화면 5칸 한 줄 */
+.cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 12px; max-width: 100%; }
 .cat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  width: clamp(110px, 38vw, 170px);
+  width: clamp(100px, 28.5vw, 160px);
   padding: 8px 8px 12px; border-radius: 28px;
   background: var(--card); color: var(--ink);
   font-size: clamp(26px, 6.5vmin, 42px); text-shadow: 0 3px 0 var(--paper);
@@ -96,11 +95,23 @@ body {
 .cat:nth-child(2) { animation-delay: .2s; }
 .cat:nth-child(3) { animation-delay: .4s; }
 .cat:nth-child(4) { animation-delay: .6s; }
+.cat:nth-child(5) { animation-delay: .8s; }
 .cat:active { box-shadow: 0 3px 0 var(--edge); animation: none; }
 .cat svg { width: 82%; height: auto; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.04); } }
 
 /* ---------- 문제 화면 ---------- */
+/* 우측 상단: 첫 화면(종류 고르기)으로 */
+.btn-back {
+  position: absolute; z-index: 2;
+  top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px));
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper); color: var(--ink);
+  box-shadow: 0 5px 0 var(--star-off), 0 8px 16px rgba(74, 54, 87, .12);
+}
+.btn-back:active { box-shadow: 0 1px 0 var(--star-off); }
+.btn-back svg { width: 28px; height: 28px; }
 .progress { display: flex; gap: 10px; font-size: clamp(28px, 7vmin, 44px); line-height: 1; }
 .progress span { color: var(--star-off); text-shadow: 0 3px 0 var(--paper); transition: color .3s; }
 .progress span.on { color: var(--sun); animation: starPop .6s cubic-bezier(.3, 1.8, .5, 1); }
@@ -246,8 +257,8 @@ body {
   .hand { font-size: 40px; }
   .start-art { display: none; }
   #screen-start { gap: 20px; }
-  .cats { grid-template-columns: repeat(4, auto); }
-  .cat { width: clamp(96px, 20vw, 140px); }
+  .cats { flex-wrap: nowrap; }
+  .cat { width: clamp(88px, 17vw, 130px); }
   .done-btns { flex-direction: row; }
 }
 
@@ -269,6 +280,9 @@ body {
 
   <!-- 2. 문제 화면 -->
   <section id="screen-quiz" class="screen" hidden>
+    <button id="btn-back" class="btn btn-back" type="button" aria-label="처음으로">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg>
+    </button>
     <div class="progress" id="progress" aria-label="진행"></div>
     <h2 class="prompt" id="prompt" aria-live="polite">어떤 동물일까요?</h2>
     <div class="stage" id="stage">
@@ -618,6 +632,97 @@ body {
     }
   ];
 
+  /* ---------- 새 ---------- */
+  // 공작 꽁지깃 부채
+  const peacockFan = Array.from({ length: 13 }, (_, i) => {
+    const deg = -170 + i * (160 / 12), a = deg * Math.PI / 180;
+    const fx = 100 + Math.cos(a) * 44, fy = 130 + Math.sin(a) * 44;
+    const ex = 100 + Math.cos(a) * 64, ey = 130 + Math.sin(a) * 64;
+    return `<ellipse cx="${f1(fx)}" cy="${f1(fy)}" rx="13" ry="32" transform="rotate(${f1(deg + 90)} ${f1(fx)} ${f1(fy)})" fill="#57C08F"/>` +
+      `<circle cx="${f1(ex)}" cy="${f1(ey)}" r="10" fill="#FFD24D"/><circle cx="${f1(ex)}" cy="${f1(ey)}" r="7" fill="#2F7CC4"/><circle cx="${f1(ex)}" cy="${f1(ey)}" r="3.5" fill="#1F3F7A"/>`;
+  }).join('');
+
+  const BIRDS = [
+    {
+      name: '펭귄', sound: '', accent: '#2F3A56', tint: '#DDEBFF',
+      svg: `
+        <ellipse cx="82" cy="184" rx="16" ry="7" fill="#FF9F43"/>
+        <ellipse cx="118" cy="184" rx="16" ry="7" fill="#FF9F43"/>
+        <g transform="rotate(25 50 118)"><ellipse cx="50" cy="118" rx="12" ry="34" fill="#2F3A56"/></g>
+        <g transform="rotate(-25 150 118)"><ellipse cx="150" cy="118" rx="12" ry="34" fill="#2F3A56"/></g>
+        <ellipse cx="100" cy="112" rx="52" ry="70" fill="#2F3A56"/>
+        <g fill="#FFFFFF"><ellipse cx="100" cy="128" rx="36" ry="50"/><circle cx="86" cy="80" r="20"/><circle cx="114" cy="80" r="20"/></g>
+        ${eye(88, 80, 5)}${eye(112, 80, 5)}
+        <path d="M91 92 L109 92 L100 104Z" fill="#FF9F43" stroke="#FF9F43" stroke-width="3" stroke-linejoin="round"/>
+        <ellipse cx="76" cy="96" rx="7" ry="4.5" fill="#FF9EAA" opacity=".8"/>
+        <ellipse cx="124" cy="96" rx="7" ry="4.5" fill="#FF9EAA" opacity=".8"/>`
+    },
+    {
+      name: '부엉이', sound: '부엉부엉!', accent: '#8F6040', tint: '#F5E6D0',
+      svg: `
+        <path d="M24 188 H176" stroke="#8A5A33" stroke-width="9" stroke-linecap="round"/>
+        <path d="M58 72 L52 28 L86 58Z M142 72 L148 28 L114 58Z" fill="#B07D52" stroke="#B07D52" stroke-width="4" stroke-linejoin="round"/>
+        <ellipse cx="52" cy="128" rx="14" ry="36" fill="#8F6040"/>
+        <ellipse cx="148" cy="128" rx="14" ry="36" fill="#8F6040"/>
+        <ellipse cx="100" cy="120" rx="52" ry="62" fill="#B07D52"/>
+        <ellipse cx="100" cy="148" rx="32" ry="30" fill="#E8C79A"/>
+        <path d="M84 138 l6 6 6 -6 M104 138 l6 6 6 -6 M94 154 l6 6 6 -6 M84 168 l6 6 6 -6 M104 168 l6 6 6 -6" fill="none" stroke="#C9A06B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="78" cy="92" r="24" fill="#F5DDBB"/><circle cx="122" cy="92" r="24" fill="#F5DDBB"/>
+        <circle cx="78" cy="92" r="14" fill="#FFD24D"/><circle cx="122" cy="92" r="14" fill="#FFD24D"/>
+        ${eye(78, 92, 8)}${eye(122, 92, 8)}
+        <path d="M93 106 L107 106 L100 120Z" fill="#F2A541" stroke="#F2A541" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M84 178 v8 M90 178 v8 M110 178 v8 M116 178 v8" stroke="#F2A541" stroke-width="4" stroke-linecap="round"/>`
+    },
+    {
+      name: '홍학', sound: '', accent: '#E8507F', tint: '#FFE0EA',
+      svg: `
+        <path d="M114 110 L114 186 M106 187 H124" fill="none" stroke="#F07A9C" stroke-width="5" stroke-linecap="round"/>
+        <path d="M122 110 L136 140 L114 148" fill="none" stroke="#F07A9C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M146 84 L172 76 L162 98Z" fill="#F0628E" stroke="#F0628E" stroke-width="4" stroke-linejoin="round"/>
+        <g transform="rotate(-10 112 94)"><ellipse cx="112" cy="94" rx="42" ry="25" fill="#FF8FB1"/></g>
+        <g transform="rotate(-10 120 92)"><ellipse cx="120" cy="92" rx="26" ry="14" fill="#F0628E"/></g>
+        <path d="M84 90 C64 72 74 46 66 30" fill="none" stroke="#FF8FB1" stroke-width="13" stroke-linecap="round"/>
+        <circle cx="66" cy="26" r="12" fill="#FF8FB1"/>
+        <path d="M57 21 L34 30 L40 42 L57 32Z" fill="#FFE0E8" stroke="#FFE0E8" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M34 30 L40 42 L45 34Z" fill="#3A2A33" stroke="#3A2A33" stroke-width="2" stroke-linejoin="round"/>
+        ${eye(68, 22, 3.5)}
+        <ellipse cx="72" cy="32" rx="4.5" ry="3" fill="#FF6F9C" opacity=".8"/>`
+    },
+    {
+      name: '공작', sound: '', accent: '#2F7CC4', tint: '#DDF5EA',
+      svg: `
+        <path d="M36 136 A64 64 0 0 1 164 136Z" fill="#3FA878"/>
+        ${peacockFan}
+        <path d="M92 166 L90 186 M108 166 L110 186 M82 187 H96 M104 187 H118" fill="none" stroke="#B07D52" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="100" cy="140" rx="22" ry="30" fill="#2F7CC4"/>
+        <ellipse cx="100" cy="102" rx="13" ry="22" fill="#2F7CC4"/>
+        <path d="M100 66 V54 M93 68 L88 57 M107 68 L112 57" stroke="#2F7CC4" stroke-width="2.5" stroke-linecap="round"/>
+        <g fill="#2F7CC4"><circle cx="100" cy="52" r="4"/><circle cx="87" cy="55" r="4"/><circle cx="113" cy="55" r="4"/></g>
+        <circle cx="100" cy="80" r="14" fill="#2F7CC4"/>
+        <ellipse cx="94" cy="79" rx="5" ry="4" fill="#FFFFFF"/><ellipse cx="106" cy="79" rx="5" ry="4" fill="#FFFFFF"/>
+        ${eye(94, 79, 3)}${eye(106, 79, 3)}
+        <path d="M96 86 L104 86 L100 94Z" fill="#F2A541" stroke="#F2A541" stroke-width="2" stroke-linejoin="round"/>`
+    },
+    {
+      name: '닭', sound: '꼬끼오!', accent: '#E04848', tint: '#FFF0E0',
+      svg: `
+        <path d="M98 156 V184 M118 156 V184 M88 186 H106 M108 186 H126" fill="none" stroke="#FFB52E" stroke-width="5" stroke-linecap="round"/>
+        <g fill="#FF5A5A"><circle cx="60" cy="50" r="8"/><circle cx="70" cy="45" r="9"/><circle cx="80" cy="50" r="8"/></g>
+        <g fill="#FFFFFF" stroke="#E3D6C8" stroke-width="3" stroke-linejoin="round">
+          <path d="M148 112 C160 82 172 66 184 62 C180 82 174 100 160 122Z"/>
+          <path d="M150 120 C170 100 184 94 194 94 C186 110 176 124 156 132Z"/>
+          <ellipse cx="108" cy="120" rx="48" ry="40"/>
+          <ellipse cx="80" cy="94" rx="20" ry="26"/>
+          <circle cx="70" cy="72" r="24"/>
+        </g>
+        <ellipse cx="112" cy="122" rx="26" ry="18" fill="#F4EDE4" stroke="#E3D6C8" stroke-width="3"/>
+        <ellipse cx="54" cy="92" rx="6" ry="9" fill="#FF5A5A"/>
+        <path d="M48 68 L32 75 L48 81Z" fill="#FFB52E" stroke="#FFB52E" stroke-width="3" stroke-linejoin="round"/>
+        ${eye(64, 66, 4)}
+        <ellipse cx="72" cy="80" rx="6" ry="4" fill="#FF9EAA" opacity=".8"/>`
+    }
+  ];
+
   /* ---------- 숫자 1~10 ---------- */
   const NUM_FONT = `'Arial Rounded MT Bold','Varela Round','Nunito',Jua,'Apple SD Gothic Neo',system-ui,sans-serif`;
   const numText = (n, x, y, size, fill, dark) =>
@@ -648,6 +753,7 @@ body {
     animal: { label: '동물', question: '어떤 동물일까요?', items: ANIMALS, icon: 0, card: '#FFE3B8', edge: '#F2B66A' },
     dino:   { label: '공룡', question: '어떤 공룡일까요?', items: DINOS,   icon: 0, card: '#DDF5D2', edge: '#8FCB80' },
     whale:  { label: '고래', question: '어떤 고래일까요?', items: WHALES,  icon: 0, card: '#DCEBFF', edge: '#8DB5EA', sea: true },
+    bird:   { label: '새',   question: '어떤 새일까요?',   items: BIRDS,   icon: 0, card: '#FFE3EE', edge: '#F2A7C0' },
     number: { label: '숫자', question: '어떤 숫자일까요?', items: NUMBERS, iconSvg: NUM_ICON, card: '#EDE4FF', edge: '#B7A3F0' }
   };
 
@@ -947,11 +1053,15 @@ body {
     if (b) startGame(b.dataset.cat);
   });
   $('#btn-again').addEventListener('click', () => startGame());
-  $('#btn-home').addEventListener('click', () => {
+  function goHome() {
     clearTimers(); fwStop(); if (synth) synth.cancel();
     phase = 'start';
     show('start');
-  });
+  }
+  $('#btn-home').addEventListener('click', goHome);
+  // 문제 화면은 아무 데나 누르면 정답 공개이므로, 집 버튼 터치는 거기로 새지 않게 막는다
+  $('#btn-back').addEventListener('pointerdown', e => e.stopPropagation());
+  $('#btn-back').addEventListener('click', e => { e.stopPropagation(); goHome(); });
   // 문제 화면은 아무 데나 터치해도 정답 공개
   screens.quiz.addEventListener('pointerdown', reveal);
   $('#btn-reveal').addEventListener('click', reveal); // 키보드(Enter/Space)용
